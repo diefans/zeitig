@@ -36,7 +36,6 @@ setup(
     keywords="time tracker",
 
     package_dir={'': 'src'},
-    # namespace_packages=['debellator'],
     packages=find_packages(
         'src',
         exclude=["tests*"]
