@@ -3,4 +3,5 @@ zope.component
 pendulum
 dateparser
 click
-toml
+colorama
+pytoml
