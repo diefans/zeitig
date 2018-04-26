@@ -4,7 +4,7 @@ import os
 
 from setuptools import find_packages, setup
 
-__version__ = "0.0.0"
+__version__ = "0.0.2"
 
 
 def read(*paths):
@@ -17,7 +17,7 @@ setup(
     name="zeitig",
     author="Oliver Berger",
     author_email="diefans@gmail.com",
-    url="https://github.com/diefans/zeit",
+    url="https://github.com/diefans/zeitig",
     description='time tracker.',
     long_description=read('README.rst'),
     version=__version__,
@@ -25,9 +25,6 @@ setup(
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: Apache Software License',
         'Intended Audience :: Developers',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
