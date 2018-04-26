@@ -20,7 +20,7 @@ import pendulum
 
 from . import utils
 
-PY_36 = (3, 6) >= sys.version_info < (3, 7)
+PY_36 = (3, 6) <= sys.version_info < (3, 7)
 PY_37 = sys.version_info >= (3, 7)
 local_timezone = pendulum.local_timezone()
 
