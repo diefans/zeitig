@@ -31,7 +31,7 @@ Example session
 
 You may add a timestamp, as in the example, which is parsed for your timezone.
 You may abbreviate the commands, so the shortes way to track your time of a
-running project is just `z w` and `z b`.
+running project is just ``z w`` and ``z b``.
 
 .. code-block::
 
