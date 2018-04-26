@@ -57,3 +57,33 @@ running project is just ``z w`` and ``z b``.
             2018-04-01 13:00:00 - 17:30:00 - 4.50
     Total hours: 8.50
 
+
+Internals
+---------
+
+You may create a ``.zeitig`` folder somewhere in your current working directory
+path to use it as the store.
+
+For every user is a separate directory created, which containes the groups and
+the events sources:
+
+.. code-block::
+
+    .zeitig/
+        |
+        +- <user>
+            |
+            +- last ---------------+
+            |                      |
+            +- groups              |
+                |                  |
+                +- <group>         |
+                    |              |
+                    +- source      |
+                        |          v
+                        +- <event UTC timestamp>
+
+
+The events are stored as simple ``toml`` files.
+
+Aggregates and reports are generated on the fly.
