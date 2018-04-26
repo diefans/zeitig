@@ -24,17 +24,22 @@ class State:
 
     def print(self, help):
         try:
-            group = self.store.group_path.name
-            click.echo(f'Last used group: {colorama.Style.BRIGHT}{group}'
-                       f'{colorama.Style.RESET_ALL}')
             click.echo(f'Store used: {colorama.Style.BRIGHT}'
                        f'{self.store.user_path}'
                        f'{colorama.Style.RESET_ALL}'
                        )
-            click.echo(f'Last event stored: {colorama.Style.BRIGHT}'
-                       f'{self.store.last_path.resolve()}'
-                       f'{colorama.Style.RESET_ALL}'
-                       )
+            if self.store.groups:
+                click.echo(f'Groups created: {", ".join(self.store.groups)}')
+
+            if self.store.last_group:
+                click.echo(f'Last used group: {colorama.Style.BRIGHT}'
+                           f'{self.store.last_group}'
+                           f'{colorama.Style.RESET_ALL}')
+            if self.store.last_path.resolve().exists():
+                click.echo(f'Last event stored: {colorama.Style.BRIGHT}'
+                           f'{self.store.last_path.resolve()}'
+                           f'{colorama.Style.RESET_ALL}'
+                           )
 
             sourcerer = sourcing.Sourcerer(self.store)
             situation = None
@@ -42,8 +47,8 @@ class State:
                 pass
             if situation:
                 click.echo(
-                    f'Last situation: {colorama.Style.BRIGHT}'
-                    f'{situation.__class__.__name__}'
+                    f'\nLast situation in {self.store.group_path.name}: {colorama.Style.BRIGHT}'
+                        f'{situation.__class__.__name__}'
                     f'{colorama.Style.RESET_ALL}'
                     f' started at {colorama.Style.BRIGHT}'
                     f'{situation.local_start.to_datetime_string()}'
@@ -88,11 +93,14 @@ class Report:
         for situation in situations:
             current_week = situation.local_start.start_of('week')
             if isinstance(situation, events.Work):
+                week_str = (f'Week: {colorama.Style.BRIGHT}'
+                            f'{current_week.week_of_year}'
+                            f'{colorama.Style.RESET_ALL}')
                 if last_week:
                     if (current_week - last_week).total_weeks():
-                        click.echo(f'\nWeek: {current_week.week_of_year}')
+                        click.echo(f'\n{week_str}')
                 else:
-                    click.echo(f'Week: {current_week.week_of_year}')
+                    click.echo(f'{week_str}')
                 click.echo(
                     f'\t{situation.local_start.to_datetime_string()}'
                     f' - {situation.local_end.to_time_string()}'

@@ -67,6 +67,21 @@ class AliasedGroup(click.Group):
         ctx.fail('Too many matches: %s' % ', '.join(sorted(matches)))
 
 
+class PendulumLocal(click.ParamType):
+    name = 'timestamp'
+
+    def convert(self, value, param, ctx):
+        try:
+            p = pendulum.parse(value, tz=events.local_timezone)
+            return p
+        except:
+            self.fail(f'`{value}` is not a valid timestamp string',
+                      param, ctx)
+
+    def __repr__(self):
+        return 'TIMESTAMP'
+
+
 @click.group(cls=AliasedGroup, invoke_without_command=True)
 @click.argument('group', required=False)
 @click.pass_context
@@ -87,7 +102,7 @@ def cli(ctx, group):
 @cli.command('work')
 @click.option('tags', '-t', '--tag', multiple=True)
 @click.option('-n', '--note')
-@click.argument('when', required=False, type=pendulum.parse)
+@click.argument('when', required=False, type=PendulumLocal())
 @click.pass_obj
 def cli_work(obj, tags, note, when):
     """Change to or start the `work` situation."""
@@ -103,7 +118,7 @@ def cli_work(obj, tags, note, when):
 @cli.command('break')
 @click.option('tags', '-t', '--tag', multiple=True)
 @click.option('-n', '--note', default=None)
-@click.argument('when', required=False, type=pendulum.parse)
+@click.argument('when', required=False, type=PendulumLocal())
 @click.pass_obj
 def cli_break(obj, tags, note, when):
     """Change to or start the `break` situation."""
@@ -119,7 +134,7 @@ def cli_break(obj, tags, note, when):
 @cli.command('add')
 @click.option('tags', '-t', '--tag', multiple=True)
 @click.option('-n', '--note', default=None)
-@click.argument('when', required=False, type=pendulum.parse)
+@click.argument('when', required=False, type=PendulumLocal())
 @click.pass_obj
 def cli_add(obj, tags, note, when):
     """Lazy apply tags and notes."""
@@ -148,24 +163,11 @@ class Regex(click.ParamType):
         return 'REGEX'
 
 
-class PendulumLocal(click.ParamType):
-    name = 'timestamp'
-
-    def convert(self, value, param, ctx):
-        try:
-            p = pendulum.parse(value, tz=events.local_timezone)
-            return p
-        except:
-            self.fail(f'`{value}` is not a valid timestamp string',
-                      param, ctx)
-
-    def __repr__(self):
-        return 'TIMESTAMP'
-
 @cli.command('remove')
 @click.option('tags', '-t', '--tag', multiple=True, help='Remove a tag.')
-@click.option('-n', '--note', default=None, type=Regex(), help='Flush notes matching this regex.')
-@click.argument('when', required=False, type=pendulum.parse)
+@click.option('-n', '--note', default=None, type=Regex(),
+              help='Flush notes matching this regex.')
+@click.argument('when', required=False, type=PendulumLocal())
 @click.pass_obj
 def cli_remove(obj, tags, note, when):
     """Lazy remove tags and flush notes."""

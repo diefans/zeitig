@@ -181,6 +181,21 @@ class Store:
         last_path = self.user_path.joinpath(LAST_NAME)
         return last_path
 
+    @utils.reify
+    def last_group(self):
+        if self.last_path.resolve().exists():
+            last_group = self.last_path.resolve().parent.parent.name
+            return last_group
+
+    @utils.reify
+    def groups(self):
+        group_base_path = self.user_path.joinpath(GROUPS_NAME).resolve()
+        if not group_base_path.is_dir():
+            group_base_path.mkdir(parents=True)
+        groups = [dir.name for dir in group_base_path.iterdir()
+                  if dir.is_dir()]
+        return groups
+
     def persist(self, event):
         """Store the event."""
         event_path = self.source_path.joinpath(
