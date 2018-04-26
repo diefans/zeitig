@@ -4,4 +4,4 @@ pendulum
 dateparser
 click
 colorama
-pytoml
+toml

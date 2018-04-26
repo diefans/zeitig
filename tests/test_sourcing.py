@@ -17,7 +17,7 @@ def store():
     import re
     import collections
     import pendulum
-    import pytoml as toml
+    import toml
 
     from zeitig import events, store
 
