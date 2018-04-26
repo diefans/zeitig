@@ -20,6 +20,8 @@ import pendulum
 
 from . import utils
 
+PY_36 = (3, 6) >= sys.version_info < (3, 7)
+PY_37 = sys.version_info >= (3, 7)
 local_timezone = pendulum.local_timezone()
 
 
@@ -101,7 +103,8 @@ class Situation(Interval):
 
     def __repr__(self):
         return (f'<{self.__class__.__name__}'
-                f' [{self.start}, {self.end}) {self.period} - {self.tags}, {self.notes}>')
+                f' [{self.start}, {self.end}) {self.period}'
+                f' - {self.tags}, {self.notes}>')
 
 
 class Work(Situation):
@@ -335,7 +338,8 @@ class AddEvent(Event, ActionEvent):
 
 
 def serialize_note(value):
-    if isinstance(value, re._pattern_type):
+    if PY_36 and isinstance(value, re._pattern_type)\
+            or PY_37 and isinstance(value, re.Pattern):
         value = value.pattern
     elif not isinstance(value, str):
         value = str(value)
