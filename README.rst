@@ -61,8 +61,8 @@ running project is just ``z w`` and ``z b``.
 Internals
 ---------
 
-You may create a ``.zeitig`` folder somewhere in your current working directory
-path to use it as the store.
+You may create a ``.zeitig`` directory somewhere in your current working
+directory path to use it as the store.
 
 For every user is a separate directory created, which containes the groups and
 the events sources:
