@@ -210,7 +210,7 @@ class Store:
     def link_last_path(self, event_path):
         if self.last_path.exists():
             self.last_path.unlink()
-        self.last_path.symlink_to(event_path)
+        self.last_path.symlink_to(event_path.relative_to(self.user_path))
 
     @utils.reify
     def last_group_path(self):
