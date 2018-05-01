@@ -1,2 +1,4 @@
 .zeitig
 .pytest_cache
+.tox
+*.pyc
