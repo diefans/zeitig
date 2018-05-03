@@ -2,5 +2,6 @@ pendulum
 dateparser
 click
 colorama
+crayons
 toml
 wheezy.template
