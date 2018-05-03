@@ -38,13 +38,32 @@ def test_summary_visitor(working_day_situations):
     from zeitig import aggregates
     from pendulum import parse, interval
 
-    wd = aggregates.SummaryVisitor()
-    visited_situations = list(wd.aggregate(working_day_situations))
+    for event in aggregates.Summary.aggregate(working_day_situations):
+        pass
 
-    assert (wd.start, wd.end)\
+    assert (event.start, event.end)\
         == (parse('2018-04-01 08'), parse('2018-04-01 18'))
 
-    assert (wd.works, wd.breaks)\
+    assert (event.works, event.breaks)\
         == (interval(hours=8, minutes=30), interval(hours=1, minutes=30))
 
-    assert working_day_situations == visited_situations
+
+@pytest.mark.parametrize('last, now, result', [
+    (None, '2018-01-02', (True, True, True, True)),
+    ('2017-12-31', '2018-01-01', (True, True, True, True)),
+])
+def test_datetime_change(last, now, result):
+    from zeitig import aggregates, events
+    from pendulum import parse, timezone
+
+    tz = timezone('Europe/Berlin')
+
+    last_event = events.Situation(start=parse(last).in_tz(tz)
+                                  if last else None)
+    event = events.Situation(start=parse(now).in_tz(tz))
+    dt_change = aggregates.DatetimeChange(last_event, event)
+    assert (
+        dt_change.is_new_day,
+        dt_change.is_new_week,
+        dt_change.is_new_month,
+        dt_change.is_new_year) == result

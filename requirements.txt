@@ -1,7 +1,6 @@
-zope.interface
-zope.component
 pendulum
 dateparser
 click
 colorama
 toml
+wheezy.template

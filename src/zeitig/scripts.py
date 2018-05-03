@@ -113,6 +113,7 @@ def cli_work(obj, tags, note, when):
     if note:
         event.note = note
     obj.store.persist(event)
+    click.echo(event)
 
 
 @cli.command('break')
@@ -129,6 +130,7 @@ def cli_break(obj, tags, note, when):
     if note:
         event.note = note
     obj.store.persist(event)
+    click.echo(event)
 
 
 @cli.command('add')
@@ -145,6 +147,7 @@ def cli_add(obj, tags, note, when):
     if note:
         event.note = note
     obj.store.persist(event)
+    click.echo(event)
 
 
 class Regex(click.ParamType):
@@ -178,16 +181,19 @@ def cli_remove(obj, tags, note, when):
     if note:
         event.note = note
     obj.store.persist(event)
+    click.echo(event)
 
 
 @cli.command('report')
 @click.option('-s', '--start', type=PendulumLocal())
 @click.option('-e', '--end', type=PendulumLocal())
+@click.option('-t', '--template', default='console',
+              help='A template to render the report.')
 @click.pass_obj
-def cli_report(obj, start, end):
+def cli_report(obj, start, end, template):
     end = (end or obj['now']).in_tz('UTC')
-    report = reporting.Report(obj.store)
-    report.print(start=start, end=end)
+    report = reporting.Report(obj.store, start=start, end=end)
+    report.print(template_name=template)
 
 
 def run():

@@ -11,11 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
+
 import click
 import colorama
-import pendulum
+import crayons
+import jinja2
+import toml
 
-from zeitig import aggregates, events, sourcing, store
+from zeitig import aggregates, events, sourcing, store, utils
+
+log = logging.getLogger(__name__)
 
 
 class State:
@@ -47,8 +53,9 @@ class State:
                 pass
             if situation:
                 click.echo(
-                    f'\nLast situation in {self.store.group_path.name}: {colorama.Style.BRIGHT}'
-                        f'{situation.__class__.__name__}'
+                    f'\nLast situation in {self.store.group_path.name}:'
+                    ' {colorama.Style.BRIGHT}'
+                    f'{situation.__class__.__name__}'
                     f'{colorama.Style.RESET_ALL}'
                     f' started at {colorama.Style.BRIGHT}'
                     f'{situation.local_start.to_datetime_string()}'
@@ -64,50 +71,69 @@ class State:
 
 
 class Report:
-    def __init__(self, store):
+    def __init__(self, store, *, start, end):
         self.store = store
-        self.sourcerer = sourcing.Sourcerer(store)
-        self.summary = aggregates.SummaryVisitor()
+        self.start = start
+        self.end = end
 
-    def print(self, *, start=None, end=None):
-        group = self.store.group_path.name
-        from_start = (
-            f' from'
-            f' {colorama.Style.BRIGHT}{start.format("%A %d %B %Y")}'
-            f'{colorama.Style.RESET_ALL}'
-        ) if start else ''
-        until_end = (
-            f' until {colorama.Style.BRIGHT}{end.format("%A %d %B %Y")}'
-            f'{colorama.Style.RESET_ALL}'
-        ) if end else ''
+    def get_template_defaults(self):
+        defaults = {}
+        for default_file_path in (
+                self.store.user_path.joinpath('template_defaults'),
+                self.store.group_path.joinpath('template_defaults'),
+        ):
+            if default_file_path.is_file():
+                with default_file_path.open('r') as default_file:
+                    data = toml.load(default_file)
+                    defaults.update(data)
+        return defaults
 
-        click.echo(
-            f'Working times'
-            f' for {colorama.Style.BRIGHT}{group}'
-            f'{colorama.Style.RESET_ALL}'
-            f'{from_start}{until_end}'
-            '\n')
-        situations = self.sourcerer.generate(start=start, end=end)
-        situations = self.summary.aggregate(situations)
-        last_week = None
-        for situation in situations:
-            current_week = situation.local_start.start_of('week')
-            if isinstance(situation, events.Work):
-                week_str = (f'Week: {colorama.Style.BRIGHT}'
-                            f'{current_week.week_of_year}'
-                            f'{colorama.Style.RESET_ALL}')
-                if last_week:
-                    if (current_week - last_week).total_weeks():
-                        click.echo(f'\n{week_str}')
-                else:
-                    click.echo(f'{week_str}')
-                click.echo(
-                    f'\t{situation.local_start.to_datetime_string()}'
-                    f' - {situation.local_end.to_time_string()}'
-                    f' - {situation.period.total_hours():.2f}'
-                    + (f' - {", ".join(situation.tags)}' if situation.tags else ''))
-                last_week = current_week
-        print(
-            f'\nTotal hours: {colorama.Style.BRIGHT}'
-            f'{self.summary.works.total_hours():.2f}'
-            f'{colorama.Style.RESET_ALL}')
+    @utils.reify
+    def jinja_env(self):
+        env = jinja2.Environment(
+            loader=jinja2.ChoiceLoader([
+                jinja2.FileSystemLoader(
+                    str(self.store.group_path.joinpath('templates'))),
+                jinja2.FileSystemLoader(
+                    str(self.store.user_path.joinpath('templates'))),
+                jinja2.PackageLoader('zeitig', 'templates'),
+            ]),
+            trim_blocks=False,
+            lstrip_blocks=True,
+            keep_trailing_newline=True,
+            autoescape=False,
+        )
+        return env
+
+    def render(self, *, template_name=None):
+        context = self.get_template_defaults()
+        context.update({
+            'py': {
+                'isinstance': isinstance,
+            },
+            'report': {
+                'start': self.start,
+                'end': self.end,
+                'group': self.store.group_path.name,
+                'source': sourcing.Sourcerer(self.store)
+                .generate(start=self.start, end=self.end),
+            },
+            'events': {
+                'Summary': aggregates.Summary,
+                'DatetimeChange': aggregates.DatetimeChange,
+                'Work': events.Work,
+                'Break': events.Break,
+                'Situation': events.Situation,
+            },
+            'c': crayons,
+        })
+        try:
+            template = self.jinja_env.get_template(template_name)
+            rendered = template.render(**context)
+        except jinja2.exceptions.TemplateAssertionError as ex:
+            log.error('%s at line %s', ex, ex.lineno)
+            raise
+        return rendered
+
+    def print(self, *, template_name=None):
+        print(self.render(template_name=template_name))
