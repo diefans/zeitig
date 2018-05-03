@@ -4,4 +4,4 @@ click
 colorama
 crayons
 toml
-wheezy.template
+jinja2
