@@ -41,6 +41,7 @@ class Sourcerer:
             return self.events[link]
         except KeyError:
             event = self.store.load(link.name)
+            assert event.when == link.when, 'Do not mess with the files!'
             self.events[link] = event
             return event
 
