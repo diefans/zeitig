@@ -139,7 +139,7 @@ def cli_break(obj, tags, note, when):
 @click.argument('when', required=False, type=PendulumLocal())
 @click.pass_obj
 def cli_add(obj, tags, note, when):
-    """Lazy apply tags and notes."""
+    """Apply tags and notes."""
     when = (when or obj['now']).in_tz('UTC')
     event = events.AddEvent(when=when)
     if tags:
@@ -173,7 +173,7 @@ class Regex(click.ParamType):
 @click.argument('when', required=False, type=PendulumLocal())
 @click.pass_obj
 def cli_remove(obj, tags, note, when):
-    """Lazy remove tags and flush notes."""
+    """Remove tags and flush notes."""
     when = (when or obj['now']).in_tz('UTC')
     event = events.RemoveEvent(when=when)
     if tags:
@@ -191,9 +191,14 @@ def cli_remove(obj, tags, note, when):
               help='A template to render the report.')
 @click.pass_obj
 def cli_report(obj, start, end, template):
+    """Create a report of your events."""
     end = (end or obj['now']).in_tz('UTC')
     report = reporting.Report(obj.store, start=start, end=end)
-    report.print(template_name=template)
+    try:
+        report.print(template_name=template)
+    except reporting.ReportTemplateNotFound:
+        click.echo(click.style(f'Template not found: {template}', fg='red'))
+        exit(1)
 
 
 def run():

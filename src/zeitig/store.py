@@ -14,12 +14,13 @@
 import getpass
 import itertools
 import logging
+import os
 import pathlib
 
 import pendulum
 import toml
 
-from . import utils, events
+from . import events, utils
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ DEFAULT_CONFIG_PATHS = [pathlib.Path(p).expanduser().resolve() for p in (
     '~/.local/share/zeitig',
     '~/.config/zeitig',
 )]
+CONFIG_STORE_ENV_NAME = 'ZEITIG_STORE'
 
 
 class LastPathNotSetException(Exception):
@@ -39,12 +41,17 @@ class LastPathNotSetException(Exception):
 
 def find_config_store(cwd=None):
     """Find the config store base directory."""
+    config_path = os.environ.get(CONFIG_STORE_ENV_NAME)
+    config_path_override = [pathlib.Path(config_path) .expanduser().resolve()]\
+        if config_path else []
+
     if cwd is None:
         cwd = pathlib.Path.cwd()
     else:
         cwd = pathlib.Path(cwd).resolve()
 
     for config_path in itertools.chain(
+            config_path_override,
             map(lambda p: p.joinpath(CONFIG_NAME).resolve(),
                 itertools.chain((cwd,), cwd.parents)),
             DEFAULT_CONFIG_PATHS

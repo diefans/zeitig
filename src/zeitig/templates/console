@@ -7,7 +7,13 @@
 {% endif %}
 {%- endmacro -%}
 Working times for {{c.white(report.group, bold=True)}}{{from_start()}}{{until_end()}}
-{%- for event in events.Summary.aggregate(events.DatetimeChange.aggregate(report.source)) -%}
+{%- for event in events.pipeline(
+    report.source,
+    events.Summary.aggregate,
+    events.filter_no_breaks,
+    events.DatetimeChange.aggregate
+)
+-%}
     {%- if py.isinstance(event, events.DatetimeChange) -%}
         {%- if event.is_new_week -%}
             {{- '\nWeek: ' }}{{c.white('{}'.format(event.now.week_of_year), bold=True)}}

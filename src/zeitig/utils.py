@@ -18,3 +18,14 @@ class adict(dict):
     def __init__(self, *args, **kwargs):
         self.__dict__ = self
         super().__init__(*args, **kwargs)
+
+
+def pipeline(*iterators):
+    """Wrap all iterators around each other in the given order."""
+    pipeline = None
+    for it in iterators:
+        if pipeline is None:
+            pipeline = it
+        else:
+            pipeline = it(pipeline)
+    return pipeline

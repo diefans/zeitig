@@ -17,11 +17,24 @@ import click
 import colorama
 import crayons
 import jinja2
+import pendulum
 import toml
 
 from zeitig import aggregates, events, sourcing, store, utils
 
 log = logging.getLogger(__name__)
+
+TEMPLATE_DEFAULTS_NAME = 'template_defaults.toml'
+TEMPLATE_SYNTAX_NAME = 'template_syntax.toml'
+TEMPLATE_PATH_NAME = 'templates'
+
+
+class ReportException(Exception):
+    pass
+
+
+class ReportTemplateNotFound(ReportException):
+    pass
 
 
 class State:
@@ -30,31 +43,22 @@ class State:
 
     def print(self, help):
         try:
-            click.echo(f'Store used: {colorama.Style.BRIGHT}'
-                       f'{self.store.user_path}'
-                       f'{colorama.Style.RESET_ALL}'
-                       )
-            if self.store.groups:
-                click.echo(f'Groups created: {", ".join(self.store.groups)}')
-
+            click.echo(
+                 f'Actual time: {pendulum.now().to_datetime_string()}'
+            )
             if self.store.last_group:
-                click.echo(f'Last used group: {colorama.Style.BRIGHT}'
+                click.echo(f'\nActual group: {colorama.Style.BRIGHT}'
                            f'{self.store.last_group}'
-                           f'{colorama.Style.RESET_ALL}')
-            if self.store.last_path.resolve().exists():
-                click.echo(f'Last event stored: {colorama.Style.BRIGHT}'
-                           f'{self.store.last_path.resolve()}'
                            f'{colorama.Style.RESET_ALL}'
-                           )
-
+                           f' of {", ".join(sorted(self.store.groups))}')
             sourcerer = sourcing.Sourcerer(self.store)
             situation = None
             for situation in sourcerer.generate():
                 pass
             if situation:
                 click.echo(
-                    f'\nLast situation in {self.store.group_path.name}:'
-                    ' {colorama.Style.BRIGHT}'
+                    f'Last situation in {self.store.group_path.name}:'
+                    f' {colorama.Style.BRIGHT}'
                     f'{situation.__class__.__name__}'
                     f'{colorama.Style.RESET_ALL}'
                     f' started at {colorama.Style.BRIGHT}'
@@ -64,10 +68,44 @@ class State:
                     + (f' - {", ".join(situation.tags)}'
                        if situation.tags else '')
                 )
+            click.echo(f'\nStore used: {colorama.Style.BRIGHT}'
+                       f'{self.store.user_path}'
+                       f'{colorama.Style.RESET_ALL}'
+                       )
+            if self.store.last_path.resolve().exists():
+                relative_event = self.store.last_path.resolve()\
+                    .relative_to(self.store.user_path)
+                click.echo(
+                    f'Last event: {colorama.Style.BRIGHT}'
+                    f'{relative_event}{colorama.Style.RESET_ALL}'
+                )
+
         except store.LastPathNotSetException:
             click.echo(f'{colorama.Fore.RED}There is no activity recorded yet!'
                        f'{colorama.Style.RESET_ALL}\n')
             click.echo(help)
+
+
+DEFAULT_JINJA_ENVS = {
+    None: {
+        'trim_blocks': False,
+        'lstrip_blocks': True,
+        'keep_trailing_newline': True,
+        'autoescape': False,
+    },
+    'latex': {
+        'block_start_string': '\\BLOCK{',
+        'block_end_string': '}',
+        'variable_start_string': '\\VAR{',
+        'variable_end_string': '}',
+        'comment_start_string': '\\#{',
+        'comment_end_string': '}',
+        'line_statement_prefix': '%%',
+        'line_comment_prefix': '%#',
+        'trim_blocks': True,
+        'autoescape': False,
+    }
+}
 
 
 class Report:
@@ -79,8 +117,8 @@ class Report:
     def get_template_defaults(self):
         defaults = {}
         for default_file_path in (
-                self.store.user_path.joinpath('template_defaults'),
-                self.store.group_path.joinpath('template_defaults'),
+                self.store.user_path.joinpath(TEMPLATE_DEFAULTS_NAME),
+                self.store.group_path.joinpath(TEMPLATE_DEFAULTS_NAME),
         ):
             if default_file_path.is_file():
                 with default_file_path.open('r') as default_file:
@@ -88,24 +126,42 @@ class Report:
                     defaults.update(data)
         return defaults
 
-    @utils.reify
-    def jinja_env(self):
+    def get_template_syntax(self, template_name):
+        jinja_envs = DEFAULT_JINJA_ENVS.copy()
+        templates = {}
+        for syntax_file_path in (
+                self.store.user_path.joinpath(TEMPLATE_SYNTAX_NAME),
+                self.store.group_path.joinpath(TEMPLATE_SYNTAX_NAME),
+        ):
+            if syntax_file_path.is_file():
+                with syntax_file_path.open('r') as syntax_file:
+                    syntax = toml.load(syntax_file)
+                    jinja_envs.update(syntax.get('jinja_env', {}))
+                    templates.update(syntax.get('templates', {}))
+
+        template_syntax_name = templates.get(template_name, None)
+        template_syntax = jinja_envs.get(template_syntax_name, None)
+        return template_syntax
+
+    def get_jinja_env(self, template_name):
+        syntax = self.get_template_syntax(template_name=template_name)
         env = jinja2.Environment(
             loader=jinja2.ChoiceLoader([
                 jinja2.FileSystemLoader(
-                    str(self.store.group_path.joinpath('templates'))),
+                    str(self.store.group_path.joinpath(TEMPLATE_PATH_NAME))),
                 jinja2.FileSystemLoader(
-                    str(self.store.user_path.joinpath('templates'))),
+                    str(self.store.user_path.joinpath(TEMPLATE_PATH_NAME))),
                 jinja2.PackageLoader('zeitig', 'templates'),
-            ]),
-            trim_blocks=False,
-            lstrip_blocks=True,
-            keep_trailing_newline=True,
-            autoescape=False,
+            ]), **syntax
         )
         return env
 
-    def render(self, *, template_name=None):
+    def get_template(self, template_name):
+        env = self.get_jinja_env(template_name)
+        template = env.get_template(template_name)
+        return template
+
+    def render(self, template_name=None):
         context = self.get_template_defaults()
         context.update({
             'py': {
@@ -124,15 +180,20 @@ class Report:
                 'Work': events.Work,
                 'Break': events.Break,
                 'Situation': events.Situation,
+                'filter_no_breaks': aggregates.filter_no_breaks,
+                'split_at_new_day': aggregates.split_at_new_day,
+                'pipeline': utils.pipeline,
             },
             'c': crayons,
         })
         try:
-            template = self.jinja_env.get_template(template_name)
+            template = self.get_template(template_name)
             rendered = template.render(**context)
         except jinja2.exceptions.TemplateAssertionError as ex:
             log.error('%s at line %s', ex, ex.lineno)
             raise
+        except jinja2.exceptions.TemplateNotFound as ex:
+            raise ReportTemplateNotFound(*sorted(ex.__dict__.items()))
         return rendered
 
     def print(self, *, template_name=None):

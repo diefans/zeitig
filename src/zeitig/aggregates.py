@@ -18,12 +18,6 @@ from zeitig import events, utils
 local_timezone = pendulum.local_timezone()
 
 
-class WorkingDaySplitter:
-    def aggregate(self, iter_situations):
-        for situation in iter_situations:
-            yield from situation.split_local_overnight()
-
-
 class Summary:
     def __init__(self):
         self.start = None
@@ -120,3 +114,20 @@ class DatetimeChange:
                     yield dt_change
                 last_event = event
             yield event
+
+
+def split_at_new_day(self, iter_events):
+    """Split a situation if it overlaps a new day."""
+    for event in iter_events:
+        if isinstance(event, events.Situation):
+            yield from event.split_local_overnight()
+        else:
+            yield event
+
+
+def filter_no_breaks(iter_events):
+    """Stop yielding `Break`s."""
+    for event in iter_events:
+        if isinstance(event, events.Break):
+            continue
+        yield event
