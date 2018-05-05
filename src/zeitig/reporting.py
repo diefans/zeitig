@@ -44,45 +44,59 @@ class State:
     def print(self, help):
         try:
             click.echo(
-                 f'Actual time: {pendulum.now().to_datetime_string()}'
+                 'Actual time: {}'.format(pendulum.now().to_datetime_string())
             )
             if self.store.last_group:
-                click.echo(f'\nActual group: {colorama.Style.BRIGHT}'
-                           f'{self.store.last_group}'
-                           f'{colorama.Style.RESET_ALL}'
-                           f' of {", ".join(sorted(self.store.groups))}')
+                click.echo((
+                    '\nActual group: {colorama.Style.BRIGHT}'
+                    '{self.store.last_group}'
+                    '{colorama.Style.RESET_ALL} of {groups}').format(
+                        colorama=colorama,
+                        self=self,
+                        groups=", ".join(sorted(self.store.groups))
+                    ))
             sourcerer = sourcing.Sourcerer(self.store)
             situation = None
             for situation in sourcerer.generate():
                 pass
             if situation:
-                click.echo(
-                    f'Last situation in {self.store.group_path.name}:'
-                    f' {colorama.Style.BRIGHT}'
-                    f'{situation.__class__.__name__}'
-                    f'{colorama.Style.RESET_ALL}'
-                    f' started at {colorama.Style.BRIGHT}'
-                    f'{situation.local_start.to_datetime_string()}'
-                    f'{colorama.Style.RESET_ALL}'
-                    f' since {situation.period.total_hours():.2f} hours'
-                    + (f' - {", ".join(situation.tags)}'
-                       if situation.tags else '')
-                )
-            click.echo(f'\nStore used: {colorama.Style.BRIGHT}'
-                       f'{self.store.user_path}'
-                       f'{colorama.Style.RESET_ALL}'
+                click.echo((
+                    'Last situation in {self.store.group_path.name}:'
+                    ' {colorama.Style.BRIGHT}'
+                    '{situation.__class__.__name__}'
+                    '{colorama.Style.RESET_ALL}'
+                    ' started at {colorama.Style.BRIGHT}'
+                    '{local_start}'
+                    '{colorama.Style.RESET_ALL}'
+                    ' since {since_total_hours:.2f} hours'
+                    '{tags}'
+                ).format(
+                    self=self,
+                    colorama=colorama,
+                    situation=situation,
+                    local_start=situation.local_start.to_datetime_string(),
+                    since_total_hours=situation.period.total_hours(),
+                    tags=(' - ' + ', '.join(situation.tags))
+                    if situation.tags else ''
+                ))
+            click.echo((
+                '\nStore used: {colorama.Style.BRIGHT}'
+                '{self.store.user_path}'
+                '{colorama.Style.RESET_ALL}').format(colorama=colorama,
+                                                     self=self)
                        )
             if self.store.last_path.resolve().exists():
                 relative_event = self.store.last_path.resolve()\
                     .relative_to(self.store.user_path)
-                click.echo(
-                    f'Last event: {colorama.Style.BRIGHT}'
-                    f'{relative_event}{colorama.Style.RESET_ALL}'
-                )
-
+                click.echo((
+                    'Last event: {colorama.Style.BRIGHT}'
+                    '{relative_event}{colorama.Style.RESET_ALL}'
+                ).format(colorama=colorama, relative_event=relative_event))
         except store.LastPathNotSetException:
-            click.echo(f'{colorama.Fore.RED}There is no activity recorded yet!'
-                       f'{colorama.Style.RESET_ALL}\n')
+            click.echo((
+                '{colorama.Fore.RED}There is no activity recorded yet!'
+                '{colorama.Style.RESET_ALL}\n'
+            ).format(colorama=colorama))
             click.echo(help)
 
 

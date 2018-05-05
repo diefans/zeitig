@@ -75,7 +75,8 @@ class PendulumLocal(click.ParamType):
             p = pendulum.parse(value, tz=events.local_timezone)
             return p
         except:
-            self.fail(f'`{value}` is not a valid timestamp string',
+            self.fail('`{value}` is not a valid timestamp string'
+                      .format(value=value),
                       param, ctx)
 
     def __repr__(self):
@@ -159,7 +160,8 @@ class Regex(click.ParamType):
             regex = re.compile(value)
             return regex
         except re.error as ex:
-            self.fail(f'`{value}` is not a valid regular expression value',
+            self.fail('`{value}` is not a valid regular expression value'
+                      .format(value=value),
                       param, ctx)
 
     def __repr__(self):
@@ -197,7 +199,8 @@ def cli_report(obj, start, end, template):
     try:
         report.print(template_name=template)
     except reporting.ReportTemplateNotFound:
-        click.echo(click.style(f'Template not found: {template}', fg='red'))
+        click.echo(click.style('Template not found: {template}'
+                               .format(template=template), fg='red'))
         exit(1)
 
 

@@ -20,9 +20,13 @@ import pendulum
 
 from . import utils
 
-PY_36 = (3, 6) <= sys.version_info < (3, 7)
 PY_37 = sys.version_info >= (3, 7)
 local_timezone = pendulum.local_timezone()
+
+if PY_37:
+    PATTERN_TYPE = re.Pattern
+else:
+    PATTERN_TYPE = re._pattern_type
 
 
 class Interval:
@@ -64,8 +68,8 @@ class Interval:
         return None
 
     def __repr__(self):
-        return (f'<{self.__class__.__name__}'
-                f' [{self.start}, {self.end}) {self.period}>')
+        return ('<{self.__class__.__name__}'
+                ' [{self.start}, {self.end}) {self.period}>').format(self=self)
 
 
 class Situation(Interval):
@@ -102,9 +106,9 @@ class Situation(Interval):
             yield self
 
     def __repr__(self):
-        return (f'<{self.__class__.__name__}'
-                f' [{self.start}, {self.end}) {self.period}'
-                f' - {self.tags}, {self.notes}>')
+        return ('<{self.__class__.__name__}'
+                ' [{self.start}, {self.end}) {self.period}'
+                ' - {self.tags}, {self.notes}>').format(self=self)
 
 
 class Work(Situation):
@@ -189,17 +193,15 @@ class _EventMeta(type):
 
         cls.__params__ = params = collections.OrderedDict()
         if cls.__event_base__:
-            for base in bases:
-                if issubclass(base, cls.__event_base__):
-                    params.update(base.__params__)
-
-        params.update((name, param)
-                      for name, param in dct.items()
-                      if isinstance(param, Parameter))
+            for base in cls.__mro__:
+                base_params = [(n, p) for (n, p) in base.__dict__.items()
+                               if isinstance(p, Parameter)]
+                if base_params:
+                    params.update(base_params)
 
         # set parameter names in python < 3.6
         if sys.version_info < (3, 6):
-            for name, param in dct.items():
+            for name, param in params.items():
                 param.__set_name__(cls, name)
 
     def __call__(cls, *, type=None, **params):
@@ -260,7 +262,7 @@ class Event(metaclass=_EventMeta):
         if item in self.__params__:
             value = getattr(self, item)
             return value
-        raise IndexError(f'Item not found: {item}')
+        raise IndexError('Item not found: {item}'.format(item=item))
 
     def source(self):
         """Generate key value pairs for all params."""
@@ -273,7 +275,7 @@ class Event(metaclass=_EventMeta):
 
     def __repr__(self):
         dct = dict(self)
-        return f'<{self.__class__.__name__} {dct}>'
+        return '<{self.__class__.__name__} {dct}>'.format(self=self, dct=dct)
 
     @property
     def local_when(self):
@@ -338,8 +340,7 @@ class AddEvent(Event, ActionEvent):
 
 
 def serialize_note(value):
-    if PY_36 and isinstance(value, re._pattern_type)\
-            or PY_37 and isinstance(value, re.Pattern):
+    if isinstance(value, PATTERN_TYPE):
         value = value.pattern
     elif not isinstance(value, str):
         value = str(value)

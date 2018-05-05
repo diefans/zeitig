@@ -41,7 +41,6 @@ def test_interval(events):
 ])
 def test_event_class_parameter(events, class_name, names):
     cls = events.Event.__events__[class_name]
-
     params = [getattr(cls, attr) for attr in names]
 
     assert [param.__name__ for param in params] == list(names)

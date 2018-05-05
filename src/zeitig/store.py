@@ -28,7 +28,7 @@ CONFIG_NAME = '.zeitig'
 SOURCE_NAME = 'source'
 GROUPS_NAME = 'groups'
 LAST_NAME = 'last'
-DEFAULT_CONFIG_PATHS = [pathlib.Path(p).expanduser().resolve() for p in (
+DEFAULT_CONFIG_PATHS = [pathlib.Path(p).expanduser() for p in (
     '~/.local/share/zeitig',
     '~/.config/zeitig',
 )]
@@ -126,7 +126,7 @@ class EventSource(Link):
         return when
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {self.when}>'
+        return '<{self.__class__.__name__} {self.when}>'.format(self=self)
 
 
 class Store:
@@ -168,7 +168,8 @@ class Store:
     def group_path(self):
         if not self.group and not self.last_path.is_symlink():
             raise LastPathNotSetException(
-                f'You need to link {self.last_path} to a group')
+                'You need to link {self.last_path} to a group'
+                .format(self=self))
         group_path = self.user_path.joinpath(GROUPS_NAME,
                                              self.group).resolve()\
             if self.group else self.last_group_path
@@ -223,7 +224,8 @@ class Store:
     def last_group_path(self):
         if not self.last_path.is_symlink():
             raise LastPathNotSetException(
-                f'You need to link {self.last_path} to a group')
+                'You need to link {self.last_path} to a group'
+                .format(self=self))
         group_path = self.last_path.resolve().parent.parent
         return group_path
 
