@@ -1,11 +1,14 @@
 zeitig
 ======
 
-.. image:: https://travis-ci.org/diefans/zeitig.svg?branch=master :target: https://travis-ci.org/diefans/zeitig
+.. image:: https://travis-ci.org/diefans/zeitig.svg?branch=master
+   :target: https://travis-ci.org/diefans/zeitig
 
-.. image:: https://img.shields.io/pypi/pyversions/zeitig.svg   :alt: PyPI - Python Version
+.. image:: https://img.shields.io/pypi/pyversions/zeitig.svg
+   :alt: PyPI - Python Version
 
-.. image:: https://img.shields.io/pypi/v/zeitig.svg   :alt: PyPI
+.. image:: https://img.shields.io/pypi/v/zeitig.svg
+   :alt: PyPI
 
 A time tracker.
 
