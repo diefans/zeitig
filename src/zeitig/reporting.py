@@ -55,11 +55,12 @@ class State:
                         self=self,
                         groups=", ".join(sorted(self.store.groups))
                     ))
+
             sourcerer = sourcing.Sourcerer(self.store)
-            situation = None
-            for situation in sourcerer.generate():
-                pass
-            if situation:
+            last_situation = next(
+                sourcerer.generate(start=self.store.last_source.when),
+                None)
+            if last_situation:
                 click.echo((
                     'Last situation in {self.store.group_path.name}:'
                     ' {colorama.Style.BRIGHT}'
@@ -73,11 +74,12 @@ class State:
                 ).format(
                     self=self,
                     colorama=colorama,
-                    situation=situation,
-                    local_start=situation.local_start.to_datetime_string(),
-                    since_total_hours=situation.period.total_hours(),
-                    tags=(' - ' + ', '.join(situation.tags))
-                    if situation.tags else ''
+                    situation=last_situation,
+                    local_start=last_situation.local_start
+                    .to_datetime_string(),
+                    since_total_hours=last_situation.period.total_hours(),
+                    tags=(' - ' + ', '.join(last_situation.tags))
+                    if last_situation.tags else ''
                 ))
             click.echo((
                 '\nStore used: {colorama.Style.BRIGHT}'

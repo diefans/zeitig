@@ -196,6 +196,12 @@ class Store:
             return last_group
 
     @utils.reify
+    def last_source(self):
+        if self.last_path.resolve().exists():
+            last_name = self.last_path.resolve().name
+            return EventSource(last_name)
+
+    @utils.reify
     def groups(self):
         group_base_path = self.user_path.joinpath(GROUPS_NAME).resolve()
         if not group_base_path.is_dir():
