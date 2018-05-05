@@ -200,7 +200,7 @@ ____________
 
 Group jinja template syntax will be merged into user syntax:
 
-.. code-block:: toml
+.. code-block::
 
     [jinja_env]
 
