@@ -1,4 +1,4 @@
-pendulum
+pendulum<2
 dateparser
 click
 colorama
