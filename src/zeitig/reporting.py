@@ -57,43 +57,49 @@ class State:
                     ))
 
             sourcerer = sourcing.Sourcerer(self.store)
-            last_situation = next(
-                sourcerer.generate(start=self.store.last_source.when),
-                None)
-            if last_situation:
-                click.echo((
-                    'Last situation in {self.store.group_path.name}:'
-                    ' {colorama.Style.BRIGHT}'
-                    '{situation.__class__.__name__}'
-                    '{colorama.Style.RESET_ALL}'
-                    ' started at {colorama.Style.BRIGHT}'
-                    '{local_start}'
-                    '{colorama.Style.RESET_ALL}'
-                    ' since {since_total_hours:.2f} hours'
-                    '{tags}'
-                ).format(
-                    self=self,
-                    colorama=colorama,
-                    situation=last_situation,
-                    local_start=last_situation.local_start
-                    .to_datetime_string(),
-                    since_total_hours=last_situation.period.total_hours(),
-                    tags=(' - ' + ', '.join(last_situation.tags))
-                    if last_situation.tags else ''
-                ))
+            if self.store.last_source:
+                last_situation = next(
+                    sourcerer.generate(start=self.store.last_source.when),
+                    None)
+                if last_situation:
+                    click.echo((
+                        'Last situation in {self.store.group_path.name}:'
+                        ' {colorama.Style.BRIGHT}'
+                        '{situation.__class__.__name__}'
+                        '{colorama.Style.RESET_ALL}'
+                        ' started at {colorama.Style.BRIGHT}'
+                        '{local_start}'
+                        '{colorama.Style.RESET_ALL}'
+                        ' since {since_total_hours:.2f} hours'
+                        '{tags}'
+                    ).format(
+                        self=self,
+                        colorama=colorama,
+                        situation=last_situation,
+                        local_start=last_situation.local_start
+                        .to_datetime_string(),
+                        since_total_hours=last_situation.period.total_hours(),
+                        tags=(' - ' + ', '.join(last_situation.tags))
+                        if last_situation.tags else ''
+                    ))
             click.echo((
                 '\nStore used: {colorama.Style.BRIGHT}'
                 '{self.store.user_path}'
                 '{colorama.Style.RESET_ALL}').format(colorama=colorama,
                                                      self=self)
                        )
-            if self.store.last_path.resolve().exists():
-                relative_event = self.store.last_path.resolve()\
-                    .relative_to(self.store.user_path)
-                click.echo((
-                    'Last event: {colorama.Style.BRIGHT}'
-                    '{relative_event}{colorama.Style.RESET_ALL}'
-                ).format(colorama=colorama, relative_event=relative_event))
+            try:
+                last_path = self.store.last_path.resolve()
+            except FileNotFoundError:
+                pass
+            else:
+                if last_path.exists():
+                    relative_event = self.store.last_path.resolve()\
+                        .relative_to(self.store.user_path)
+                    click.echo((
+                        'Last event: {colorama.Style.BRIGHT}'
+                        '{relative_event}{colorama.Style.RESET_ALL}'
+                    ).format(colorama=colorama, relative_event=relative_event))
         except store.LastPathNotSetException:
             click.echo((
                 '{colorama.Fore.RED}There is no activity recorded yet!'

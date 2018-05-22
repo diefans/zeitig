@@ -42,7 +42,7 @@ class LastPathNotSetException(Exception):
 def find_config_store(cwd=None):
     """Find the config store base directory."""
     config_path = os.environ.get(CONFIG_STORE_ENV_NAME)
-    config_path_override = [pathlib.Path(config_path) .expanduser().resolve()]\
+    config_path_override = [pathlib.Path(config_path).expanduser()]\
         if config_path else []
 
     if cwd is None:
@@ -52,12 +52,15 @@ def find_config_store(cwd=None):
 
     for config_path in itertools.chain(
             config_path_override,
-            map(lambda p: p.joinpath(CONFIG_NAME).resolve(),
+            map(lambda p: p.joinpath(CONFIG_NAME),
                 itertools.chain((cwd,), cwd.parents)),
             DEFAULT_CONFIG_PATHS
     ):
-        if config_path.is_dir():
-            return config_path
+        try:
+            if config_path.resolve().is_dir():
+                return config_path
+        except FileNotFoundError:
+            pass
     else:
         # create default
         config_path.mkdir()
@@ -159,7 +162,7 @@ class Store:
 
     @utils.reify
     def user_path(self):
-        user_path = self.store_path.joinpath(self.user).resolve()
+        user_path = self.store_path.joinpath(self.user)
         if not user_path.is_dir():
             user_path.mkdir(parents=True)
         return user_path
@@ -171,7 +174,7 @@ class Store:
                 'You need to link {self.last_path} to a group'
                 .format(self=self))
         group_path = self.user_path.joinpath(GROUPS_NAME,
-                                             self.group).resolve()\
+                                             self.group)\
             if self.group else self.last_group_path
         if not group_path.is_dir():
             group_path.mkdir(parents=True)
@@ -179,7 +182,7 @@ class Store:
 
     @utils.reify
     def source_path(self):
-        source_path = self.group_path.joinpath(SOURCE_NAME).resolve()
+        source_path = self.group_path.joinpath(SOURCE_NAME)
         if not source_path.is_dir():
             source_path.mkdir(parents=True)
         return source_path
@@ -191,19 +194,24 @@ class Store:
 
     @utils.reify
     def last_group(self):
-        if self.last_path.resolve().exists():
-            last_group = self.last_path.resolve().parent.parent.name
+        if self.last_path.exists():
+            last_group = self.last_path.parent.parent.name
             return last_group
 
     @utils.reify
     def last_source(self):
-        if self.last_path.resolve().exists():
-            last_name = self.last_path.resolve().name
-            return EventSource(last_name)
+        try:
+            last_path = self.last_path.resolve()
+        except FileNotFoundError:
+            pass
+        else:
+            if last_path.exists():
+                last_name = last_path.name
+                return EventSource(last_name)
 
     @utils.reify
     def groups(self):
-        group_base_path = self.user_path.joinpath(GROUPS_NAME).resolve()
+        group_base_path = self.user_path.joinpath(GROUPS_NAME)
         if not group_base_path.is_dir():
             group_base_path.mkdir(parents=True)
         groups = [dir.name for dir in group_base_path.iterdir()
