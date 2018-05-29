@@ -199,6 +199,7 @@ class Report:
             'events': {
                 'Summary': aggregates.Summary,
                 'DatetimeChange': aggregates.DatetimeChange,
+                'DatetimeStats': aggregates.DatetimeStats,
                 'Work': events.Work,
                 'Break': events.Break,
                 'Situation': events.Situation,

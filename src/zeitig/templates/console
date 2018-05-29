@@ -11,7 +11,8 @@ Working times for {{c.white(report.group, bold=True)}}{{from_start()}}{{until_en
     report.source,
     events.Summary.aggregate,
     events.filter_no_breaks,
-    events.DatetimeChange.aggregate
+    events.DatetimeChange.aggregate,
+    events.DatetimeStats.aggregate
 )
 -%}
     {%- if py.isinstance(event, events.DatetimeChange) -%}
@@ -25,5 +26,9 @@ Working times for {{c.white(report.group, bold=True)}}{{from_start()}}{{until_en
     {% endif -%}
     {% if py.isinstance(event, events.Summary) -%}
         {{ '\nTotal hours: ' }}{{c.white('{0:.2f}'.format(event.works.total_hours()), bold=True)}}
+    {%- endif -%}
+    {% if py.isinstance(event, events.DatetimeStats) -%}
+        {{ '\nTotal days: ' }}{{c.white('{0}'.format(event.working_days|count), bold=True)-}}
+        {{ '\nHours per day: ' }}{{c.white('{0:.2f}'.format(event.hours_per_working_day), bold=True)}}
     {%- endif -%}
 {%- endfor -%}

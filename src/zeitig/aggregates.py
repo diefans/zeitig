@@ -25,25 +25,28 @@ class Summary:
         self.works = pendulum.interval()
         self.breaks = pendulum.interval()
 
+    def apply_event(self, event, last_breaks=None):
+        if isinstance(event, events.Work):
+            if self.start is None:
+                self.start = event.start
+            self.end = event.end
+            self.works += event.period
+            # only if we have another work, we add last breaks
+            for b in last_breaks:
+                self.breaks += b.period
+            last_breaks.clear()
+
+        elif isinstance(event, events.Break)\
+                and self.start is not None:
+            # we collect breaks after start
+            last_breaks.append(event)
+
     @classmethod
     def aggregate(cls, iter_events):
         summary = cls()
         last_breaks = []
         for event in iter_events:
-            if isinstance(event, events.Work):
-                if summary.start is None:
-                    summary.start = event.start
-                summary.end = event.end
-                summary.works += event.period
-                # only if we have another work, we add last breaks
-                for b in last_breaks:
-                    summary.breaks += b.period
-                last_breaks = []
-
-            elif isinstance(event, events.Break)\
-                    and summary.start is not None:
-                # we collect breaks after start
-                last_breaks.append(event)
+            summary.apply_event(event, last_breaks)
             yield event
         yield summary
 
@@ -114,6 +117,32 @@ class DatetimeChange:
                     yield dt_change
                 last_event = event
             yield event
+
+
+class DatetimeStats:
+    def __init__(self):
+        self.working_days = []
+        self.summary = None
+
+    def apply_event(self, event):
+        if isinstance(event, DatetimeChange):
+            if event.is_new_day and isinstance(event.event, events.Work):
+                self.working_days.append(event.event.local_start.date())
+
+        if isinstance(event, Summary):
+            self.summary = event
+
+    @classmethod
+    def aggregate(cls, iter_events):
+        stats = cls()
+        for event in iter_events:
+            stats.apply_event(event)
+            yield event
+        yield stats
+
+    @property
+    def hours_per_working_day(self):
+        return self.summary.works.total_hours() / len(self.working_days)
 
 
 def split_at_new_day(self, iter_events):
