@@ -225,6 +225,9 @@ class Store:
         )
         source = dict(event.source())
         with event_path.open('w') as event_file:
+            # TODO FIXME XXX toml 1.0 now uses _dump_str for dumping unknown
+            # values but this calls repr(value), which make the pendulum
+            # instance render wrong
             toml.dump(source, event_file)
         log.info('Persisted event: %s', source)
         self.link_last_path(event_path)

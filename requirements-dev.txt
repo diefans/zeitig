@@ -1,14 +1,12 @@
-async_generator
 pytest
 pytest-cache
-pytest-asyncio
 pytest-random
 pytest-cov
 pytest-benchmark
 pytest-watch
 pytest-testmon
-pylama
-pylama-pylint
+pylava
+pylava-pylint
 pycodestyle
 pydocstyle
 radon
