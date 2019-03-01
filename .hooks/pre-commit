@@ -22,7 +22,7 @@ if [ "$old_stash" = "$new_stash" ]; then
 fi
 
 # Perform testing...
-pytest tests -rf --strict --random --random-group
+pytest tests -rf --strict
 status=$?
 
 # Restore changes
