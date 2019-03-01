@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "zeitig"
-version = "0.2.6"
+version = "0.3.0"
 description = "time tracker and reporter"
 authors = ["Oliver Berger <diefans@gmail.com>"]
 license = "Apache-2.0"
