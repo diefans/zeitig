@@ -7,5 +7,5 @@ python:
 install:
   - pip install -U pip
   - pip install .
-  - pip install pytest-randomly
+  - pip install pytest-randomly pytest-cov
 script: pytest tests
