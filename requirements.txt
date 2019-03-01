@@ -1,7 +1,0 @@
-pendulum<2
-dateparser
-click
-colorama
-crayons
-toml==0.9.4
-jinja2

@@ -3,12 +3,12 @@ import pytest
 from unittest import mock
 
 
-
 @pytest.fixture
 def utcnow():
     import pendulum
-    with mock.patch.object(pendulum, 'utcnow') as mocked_utcnow:
-        mocked_utcnow.return_value = pendulum.parse('2018-04-01T16:00:00+00:00')
+    with mock.patch.object(pendulum, 'now') as mocked_utcnow:
+        mocked_utcnow.return_value = \
+            pendulum.parse('2018-04-01T16:00:00+00:00')
         yield
 
 
@@ -17,7 +17,6 @@ def store():
     import re
     import collections
     import pendulum
-    import toml
 
     from zeitig import events, store
 

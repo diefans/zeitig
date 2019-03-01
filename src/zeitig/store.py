@@ -18,7 +18,7 @@ import os
 import pathlib
 
 import pendulum
-import toml
+import qtoml
 
 from . import events, utils
 
@@ -129,7 +129,7 @@ class EventSource(Link):
         return when
 
     def __repr__(self):
-        return '<{self.__class__.__name__} {self.when}>'.format(self=self)
+        return f'<{self.__class__.__name__} {self.when}>'
 
 
 class Store:
@@ -155,6 +155,15 @@ class Store:
         self.store_path = store_path if store_path else find_config_store()
         self.group = group
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.store_path} [{self.group}]'
+
+    def iter_names_created(self):
+        """The list of event paths sorted after creation time."""
+        paths = sorted(((x, x.stat()) for x in self.source_path.iterdir()),
+                       key=lambda x: (x[1].st_ctime, x[1].st_mtime, x[0].name))
+        return paths
+
     def iter_names(self):
         """Create a double linked list of all event dates."""
         paths = sorted(map(lambda x: x.name, self.source_path.iterdir()))
@@ -171,8 +180,8 @@ class Store:
     def group_path(self):
         if not self.group and not self.last_path.is_symlink():
             raise LastPathNotSetException(
-                'You need to link {self.last_path} to a group'
-                .format(self=self))
+                f'You need to link {self.last_path} to a group'
+            )
         group_path = self.user_path.joinpath(GROUPS_NAME,
                                              self.group)\
             if self.group else self.last_group_path
@@ -194,9 +203,10 @@ class Store:
 
     @utils.reify
     def last_group(self):
-        if self.last_path.exists():
-            last_group = self.last_path.parent.parent.name
-            return last_group
+        try:
+            return self.last_group_path.name
+        except LastPathNotSetException:
+            pass
 
     @utils.reify
     def last_source(self):
@@ -225,29 +235,34 @@ class Store:
         )
         source = dict(event.source())
         with event_path.open('w') as event_file:
-            # TODO FIXME XXX toml 1.0 now uses _dump_str for dumping unknown
-            # values but this calls repr(value), which make the pendulum
-            # instance render wrong
-            toml.dump(source, event_file)
+            qtoml.dump(source, event_file)
         log.info('Persisted event: %s', source)
-        self.link_last_path(event_path)
+        self.link_last_path()
 
-    def link_last_path(self, event_path):
-        if self.last_path.exists():
-            self.last_path.unlink()
-        self.last_path.symlink_to(event_path.relative_to(self.user_path))
+    def link_last_path(self):
+        """Point last path to the actual group path."""
+        if self.last_group != self.group:
+            if self.last_path.exists():
+                self.last_path.unlink()
+            self.last_path.symlink_to(self.group_path.relative_to(self.user_path))
 
     @utils.reify
     def last_group_path(self):
         if not self.last_path.is_symlink():
             raise LastPathNotSetException(
-                'You need to link {self.last_path} to a group'
-                .format(self=self))
-        group_path = self.last_path.resolve().parent.parent
+                f'You need to link {self.last_path} to a group')
+        resolved_last_path = self.last_path.resolve()
+        # this fixes old last paths, which point to an event and not to a group
+        # since we may find the last event easily by sorting timestamps
+        # it is mor maintable to point to the last group only
+        if resolved_last_path.is_file():
+            group_path = resolved_last_path.parent.parent
+        else:
+            group_path = resolved_last_path
         return group_path
 
     def load(self, filename):
         event_path = self.source_path.joinpath(filename)
         with event_path.open('r') as event_file:
-            event = events.Event(**toml.load(event_file))
+            event = events.Event(**qtoml.load(event_file))
         return event

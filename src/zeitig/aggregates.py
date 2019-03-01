@@ -22,8 +22,8 @@ class Summary:
     def __init__(self):
         self.start = None
         self.end = None
-        self.works = pendulum.interval()
-        self.breaks = pendulum.interval()
+        self.works = pendulum.duration()
+        self.breaks = pendulum.duration()
 
     def apply_event(self, event, last_breaks=None):
         if isinstance(event, events.Work):
@@ -49,6 +49,66 @@ class Summary:
             summary.apply_event(event, last_breaks)
             yield event
         yield summary
+
+
+class JoinedWorkDay(events.Situation):
+    """Creates a new Situation for a whole day."""
+    def __init__(self, date, *, tags=None, duration=None):
+        self.date = date
+        super().__init__(
+            start=date.start_of('day'),
+            end=(date + pendulum.duration(days=1)).start_of('day'),
+            tags=tags
+        )
+        self.duration = (duration if duration is not None
+                         else pendulum.duration())
+
+    def __eq__(self, other):
+        return (
+            self.start == other.start
+            and self.end == other.end
+            and self.duration == other.duration
+        )
+
+    @property
+    def unique_tags(self):
+        seen = set()
+        unique_tags = []
+        for tag in self.tags:
+            if tag in seen:
+                continue
+            seen.add(tag)
+            unique_tags.append(tag)
+        return unique_tags
+
+    def add_work(self, work_event):
+        self.tags.extend(work_event.tags)
+        self.notes.extend(work_event.notes)
+        self.duration += work_event.period.as_interval()
+
+    @classmethod
+    def aggregate(cls, iter_events):
+        actual_day = None
+        for event in iter_events:
+            if isinstance(event, events.Work):
+                if not actual_day:
+                    actual_day = JoinedWorkDay(event.start)
+
+                else:
+                    dt_change = DatetimeChange(actual_day, event)
+                    if dt_change.is_new_day:
+                        yield actual_day
+                        actual_day = JoinedWorkDay(event.start)
+
+                actual_day.add_work(event)
+            yield event
+        else:
+            # yield the last day
+            yield actual_day
+
+    def __repr__(self):
+        return (f'<{self.__class__.__name__}'
+                f' [{self.start}, {self.end}) {self.duration}>')
 
 
 class DatetimeChange:
@@ -145,7 +205,7 @@ class DatetimeStats:
         return self.summary.works.total_hours() / len(self.working_days)
 
 
-def split_at_new_day(self, iter_events):
+def split_at_new_day(iter_events):
     """Split a situation if it overlaps a new day."""
     for event in iter_events:
         if isinstance(event, events.Situation):

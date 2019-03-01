@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "zeitig"
+version = "0.2.6"
+description = "time tracker and reporter"
+authors = ["Oliver Berger <diefans@gmail.com>"]
+license = "Apache-2.0"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+pendulum = "*"
+dateparser = "*"
+click = "*"
+colorama = "*"
+crayons = "*"
+jinja2 = "*"
+qtoml = "^0.2.4"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cache = "*"
+pytest-randomly = "*"
+pytest-cov = "*"
+pytest-benchmark = "*"
+pytest-watch = "*"
+pytest-testmon = "*"
+pylava = "*"
+pylava-pylint = "*"
+pycodestyle = "*"
+pydocstyle = "*"
+radon = "*"
+isort = "*"
+ipython = "*"
+pdbpp = "*"
+colorlog = "*"
+tox = "*"
+
+[tool.poetry.scripts]
+z = "zeitig.scripts:run"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

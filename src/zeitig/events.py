@@ -58,7 +58,6 @@ class Interval:
 
     @utils.reify
     def is_local_overnight(self):
-        # take either end or utcnow
         if self.local_start:
             # either end or local now
             end = self.local_end or pendulum.now()
@@ -68,8 +67,8 @@ class Interval:
         return None
 
     def __repr__(self):
-        return ('<{self.__class__.__name__}'
-                ' [{self.start}, {self.end}) {self.period}>').format(self=self)
+        return (f'<{self.__class__.__name__}'
+                f' [{self.start}, {self.end}) {self.period}>')
 
 
 class Situation(Interval):
@@ -106,9 +105,9 @@ class Situation(Interval):
             yield self
 
     def __repr__(self):
-        return ('<{self.__class__.__name__}'
-                ' [{self.start}, {self.end}) {self.period}'
-                ' - {self.tags}, {self.notes}>').format(self=self)
+        return (f'<{self.__class__.__name__}'
+                f' [{self.start}, {self.end}) {self.period.as_interval()}'
+                f' - {self.tags}, {self.notes}>')
 
 
 class Work(Situation):
@@ -152,9 +151,9 @@ class Parameter:
         except KeyError:
             if self.default is NoDefault:
                 raise AttributeError(
-                    "The Parameter has no default value "
-                    "and another value was not assigned yet: {}"
-                    .format(self.__name__))
+                    'The Parameter has no default value '
+                    f'and another value was not assigned yet: {self.__name__}'
+                )
 
             default = self.default()\
                 if callable(self.default) else self.default
@@ -214,7 +213,7 @@ def validate_when(value):
     """Used to convert between pendulum and other types of datetime."""
     if isinstance(value, datetime.datetime):
         value = pendulum.from_timestamp(value.timestamp(), tz='UTC')
-    elif not isinstance(value, pendulum.Pendulum):
+    elif not isinstance(value, pendulum.DateTime):
         value = pendulum.parse(value)
 
     value = value.in_tz('UTC')
@@ -233,7 +232,7 @@ class Event(metaclass=_EventMeta):
     __type__ = None
 
     when = Parameter(
-        default=pendulum.utcnow, deserialize=validate_when,
+        default=pendulum.now(tz='UTC'), deserialize=validate_when,
         description='Time of the event.'
     )
     type = Parameter(
@@ -262,7 +261,7 @@ class Event(metaclass=_EventMeta):
         if item in self.__params__:
             value = getattr(self, item)
             return value
-        raise IndexError('Item not found: {item}'.format(item=item))
+        raise IndexError(f'Item not found: {item}')
 
     def source(self):
         """Generate key value pairs for all params."""
@@ -274,8 +273,8 @@ class Event(metaclass=_EventMeta):
                 pass
 
     def __repr__(self):
-        dct = dict(self)
-        return '<{self.__class__.__name__} {dct}>'.format(self=self, dct=dct)
+        tags = ' '.join(f'#{tag}' for tag in self.tags)
+        return f'[{self.__type__} @ {self.when}{" " + tags if tags else ""}]'
 
     @property
     def local_when(self):

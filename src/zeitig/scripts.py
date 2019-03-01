@@ -25,15 +25,35 @@ reports
 
 z [<group>] report
 
+
+templates
+=========
+
+z [<group>] template defaults get
+z [<group>] template defaults set - <file>
+
+
+maintaining
+===========
+
+z [<group>] maintain undo
+z [<group>] maintain list
+
 """
 import logging
 
 import click
+import crayons
 import pendulum
+import qtoml
 
-from . import events, reporting, store, utils
+from . import events, reporting, store, utils, sourcing
 
 log = logging.getLogger(__name__)
+
+
+def run():
+    return cli(obj=utils.adict(), auto_envvar_prefix='ZEITIG')
 
 
 class AliasedGroup(click.Group):
@@ -75,8 +95,7 @@ class PendulumLocal(click.ParamType):
             p = pendulum.parse(value, tz=events.local_timezone)
             return p
         except:
-            self.fail('`{value}` is not a valid timestamp string'
-                      .format(value=value),
+            self.fail(f'`{value}` is not a valid timestamp string',
                       param, ctx)
 
     def __repr__(self):
@@ -88,7 +107,7 @@ class PendulumLocal(click.ParamType):
 @click.pass_context
 def cli(ctx, group):
     # logging.basicConfig(level=logging.DEBUG)
-    now = pendulum.utcnow()
+    now = pendulum.now(tz='UTC')
     ev_store = store.Store(group=group)
     ctx.obj.update({
         'now': now,
@@ -159,9 +178,8 @@ class Regex(click.ParamType):
         try:
             regex = re.compile(value)
             return regex
-        except re.error as ex:
-            self.fail('`{value}` is not a valid regular expression value'
-                      .format(value=value),
+        except re.error:
+            self.fail(f'`{value}` is not a valid regular expression value',
                       param, ctx)
 
     def __repr__(self):
@@ -199,10 +217,93 @@ def cli_report(obj, start, end, template):
     try:
         report.print(template_name=template)
     except reporting.ReportTemplateNotFound:
-        click.echo(click.style('Template not found: {template}'
-                               .format(template=template), fg='red'))
+        click.echo(click.style(f'Template not found: {template}', fg='red'))
         exit(1)
 
 
-def run():
-    return cli(obj=utils.adict(), auto_envvar_prefix='ZEITIG')
+@cli.group('template')
+def cli_template():
+    """Template commands."""
+
+
+@cli_template.group('defaults')
+def cli_template_defaults():
+    """Template defaults commands."""
+
+
+@cli_template_defaults.command('get')
+@click.pass_obj
+def cli_template_defaults_get(obj):
+    """Show the actual template defaults for this user or group."""
+    templates = reporting.Templates(obj.store)
+    defaults_file_path = (templates.group_defaults_file_path
+                          if obj.store.group
+                          else templates.user_defaults_file_path)
+    if defaults_file_path.is_file():
+        with defaults_file_path.open('r') as f:
+            click.echo(f.read())
+
+
+@cli_template_defaults.command('set')
+@click.argument('defaults', type=click.File('r'))
+@click.pass_obj
+def cli_template_defaults_set(obj, defaults):
+    """Set the template defaults for this user or group."""
+    data = defaults.read()
+    try:
+        qtoml.loads(data)
+    except qtoml.decoder.TOMLDecodeError as ex:
+        click.echo(crayons.red(f'{ex.__class__.__name__}: {ex.args[0]}'))
+        exit(1)
+
+    templates = reporting.Templates(obj.store)
+    defaults_file_path = (templates.group_defaults_file_path
+                          if obj.store.group
+                          else templates.user_defaults_file_path)
+    with defaults_file_path.open('w') as f:
+        f.write(data)
+
+
+@cli_template_defaults.command('join')
+@click.pass_obj
+def cli_template_defaults_join(obj):
+    """Show the joined actual template defaults."""
+    templates = reporting.Templates(obj.store)
+    defaults = templates.join_template_defaults()
+    click.echo(qtoml.dumps(defaults))
+
+
+@cli.group('maintain')
+def cli_maintain():
+    """Maintaining commands."""
+
+
+@cli_maintain.command('list')
+@click.pass_obj
+def cli_maintain_list(obj):
+    """Show the list of events sorted by creation time."""
+    sourcerer = sourcing.Sourcerer(obj.store)
+
+    for event_path, event_stat in obj.store.iter_names_created():
+        event_ctime = pendulum.from_timestamp(event_stat.st_ctime, tz='UTC')
+        event = sourcerer.load_event(store.EventSource(event_path.name))
+        click.echo(f'{event_ctime} {event}')
+
+
+@cli_maintain.command('undo')
+@click.pass_obj
+def cli_maintain_undo(obj):
+    """Undo the last event."""
+    last_event_path, last_event_stat = \
+        next(reversed(obj.store.iter_names_created()), (None, None))
+    if last_event_path:
+        sourcerer = sourcing.Sourcerer(obj.store)
+        event = sourcerer.load_event(store.EventSource(last_event_path.name))
+
+        click.echo(crayons.yellow(f'Undoing event: {event}'))
+        click.echo(f'Location: {last_event_path}')
+        click.echo()
+        click.echo(qtoml.dumps(dict(event.source())))
+
+        if click.confirm('Are you sure?'):
+            last_event_path.unlink()

@@ -1,9 +1,9 @@
 {%- macro from_start() -%}
-{% if report.start %} from {{c.white(report.start.format("%A %d %B %Y"), bold=True)}}
+{% if report.start %} from {{c.white(report.start.format("dddd D MMMM YYYY"), bold=True)}}
 {%- endif %}
 {%- endmacro -%}
 {%- macro until_end() -%}
-{% if report.end %} until {{c.white(report.end.format("%A %d %B %Y"), bold=True)}}
+{% if report.end %} until {{c.white(report.end.format("dddd D MMMM YYYY"), bold=True)}}
 {% endif %}
 {%- endmacro -%}
 Working times for {{c.white(report.group, bold=True)}}{{from_start()}}{{until_end()}}

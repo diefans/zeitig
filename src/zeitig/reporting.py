@@ -18,7 +18,7 @@ import colorama
 import crayons
 import jinja2
 import pendulum
-import toml
+import qtoml
 
 from zeitig import aggregates, events, sourcing, store, utils
 
@@ -42,70 +42,54 @@ class State:
         self.store = store
 
     def print(self, help):
+        click.echo(
+             f'Actual time: {pendulum.now().to_datetime_string()}'
+        )
+        click.echo(
+            f'\nStore used: {colorama.Style.BRIGHT}'
+            f'{self.store.user_path}'
+            f'{colorama.Style.RESET_ALL}')
         try:
             click.echo(
-                 'Actual time: {}'.format(pendulum.now().to_datetime_string())
+                f'\nActual group: {colorama.Style.BRIGHT}'
+                f'{self.store.last_group}'
+                f'{colorama.Style.RESET_ALL} of '
+                f'{", ".join(sorted(self.store.groups))}'
             )
-            if self.store.last_group:
-                click.echo((
-                    '\nActual group: {colorama.Style.BRIGHT}'
-                    '{self.store.last_group}'
-                    '{colorama.Style.RESET_ALL} of {groups}').format(
-                        colorama=colorama,
-                        self=self,
-                        groups=", ".join(sorted(self.store.groups))
-                    ))
 
             sourcerer = sourcing.Sourcerer(self.store)
-            if self.store.last_source:
+            last_event_path, last_event_stat = \
+                next(reversed(self.store.iter_names_created()), (None, None))
+
+            if last_event_path:
+                last_event = sourcerer.load_event(
+                    store.EventSource(last_event_path.name))
                 last_situation = next(
-                    sourcerer.generate(start=self.store.last_source.when),
+                    sourcerer.generate(start=last_event.when),
                     None)
                 if last_situation:
-                    click.echo((
-                        'Last situation in {self.store.group_path.name}:'
-                        ' {colorama.Style.BRIGHT}'
-                        '{situation.__class__.__name__}'
-                        '{colorama.Style.RESET_ALL}'
-                        ' started at {colorama.Style.BRIGHT}'
-                        '{local_start}'
-                        '{colorama.Style.RESET_ALL}'
-                        ' since {since_total_hours:.2f} hours'
-                        '{tags}'
-                    ).format(
-                        self=self,
-                        colorama=colorama,
-                        situation=last_situation,
-                        local_start=last_situation.local_start
-                        .to_datetime_string(),
-                        since_total_hours=last_situation.period.total_hours(),
-                        tags=(' - ' + ', '.join(last_situation.tags))
-                        if last_situation.tags else ''
-                    ))
-            click.echo((
-                '\nStore used: {colorama.Style.BRIGHT}'
-                '{self.store.user_path}'
-                '{colorama.Style.RESET_ALL}').format(colorama=colorama,
-                                                     self=self)
-                       )
-            try:
-                last_path = self.store.last_path.resolve()
-            except FileNotFoundError:
-                pass
-            else:
-                if last_path.exists():
-                    relative_event = self.store.last_path.resolve()\
-                        .relative_to(self.store.user_path)
-                    click.echo((
-                        'Last event: {colorama.Style.BRIGHT}'
-                        '{relative_event}{colorama.Style.RESET_ALL}'
-                    ).format(colorama=colorama, relative_event=relative_event))
+                    click.echo(
+                        f'Last situation in {self.store.group_path.name}: '
+                        f'{colorama.Style.BRIGHT}'
+                        f'{last_situation}'
+                        f'{colorama.Style.RESET_ALL} '
+                        f'started at {colorama.Style.BRIGHT}'
+                        f'{last_situation.local_start}'
+                        f'{colorama.Style.RESET_ALL} since '
+                        f'{last_situation.period.total_hours():.2f} hours'
+                        f'{" - " + ", ".join(last_situation.tags)}'
+                    )
         except store.LastPathNotSetException:
-            click.echo((
-                '{colorama.Fore.RED}There is no activity recorded yet!'
-                '{colorama.Style.RESET_ALL}\n'
-            ).format(colorama=colorama))
-            click.echo(help)
+            if self.store.groups:
+                click.echo(f'{colorama.Fore.YELLOW}'
+                           'Last group not persisted!'
+                           f'{colorama.Style.RESET_ALL}')
+            else:
+                click.echo(
+                    f'{colorama.Fore.RED}There is no activity recorded yet!'
+                    f'{colorama.Style.RESET_ALL}\n'
+                )
+                click.echo(help)
 
 
 DEFAULT_JINJA_ENVS = {
@@ -130,21 +114,31 @@ DEFAULT_JINJA_ENVS = {
 }
 
 
-class Report:
-    def __init__(self, store, *, start, end):
+class Templates:
+    def __init__(self, store):
         self.store = store
-        self.start = start
-        self.end = end
 
-    def get_template_defaults(self):
+    @utils.reify
+    def user_defaults_file_path(self):
+        defaults_file_path = \
+            self.store.user_path.joinpath(TEMPLATE_DEFAULTS_NAME)
+        return defaults_file_path
+
+    @utils.reify
+    def group_defaults_file_path(self):
+        defaults_file_path = \
+            self.store.group_path.joinpath(TEMPLATE_DEFAULTS_NAME)
+        return defaults_file_path
+
+    def join_template_defaults(self):
         defaults = {}
         for default_file_path in (
-                self.store.user_path.joinpath(TEMPLATE_DEFAULTS_NAME),
-                self.store.group_path.joinpath(TEMPLATE_DEFAULTS_NAME),
+                self.user_defaults_file_path,
+                self.group_defaults_file_path,
         ):
             if default_file_path.is_file():
                 with default_file_path.open('r') as default_file:
-                    data = toml.load(default_file)
+                    data = qtoml.load(default_file)
                     defaults.update(data)
         return defaults
 
@@ -157,7 +151,7 @@ class Report:
         ):
             if syntax_file_path.is_file():
                 with syntax_file_path.open('r') as syntax_file:
-                    syntax = toml.load(syntax_file)
+                    syntax = qtoml.load(syntax_file)
                     jinja_envs.update(syntax.get('jinja_env', {}))
                     templates.update(syntax.get('templates', {}))
 
@@ -183,8 +177,15 @@ class Report:
         template = env.get_template(template_name)
         return template
 
+
+class Report(Templates):
+    def __init__(self, store, *, start, end):
+        super().__init__(store)
+        self.start = start
+        self.end = end
+
     def render(self, template_name=None):
-        context = self.get_template_defaults()
+        context = self.join_template_defaults()
         context.update({
             'py': {
                 'isinstance': isinstance,

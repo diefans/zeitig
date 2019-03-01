@@ -78,7 +78,7 @@ class Sourcerer:
                 event.apply_to_situation(current_situation)
         if current_situation:
             # quasi close last situation
-            current_situation.end = pendulum.utcnow()
+            current_situation.end = pendulum.now(tz='UTC')
             if end:
                 current_situation.end = end
             yield current_situation
