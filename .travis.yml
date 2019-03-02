@@ -5,7 +5,7 @@ matrix:
     - python: '3.6'
     - python: '3.7'
     - python: '3.8-dev'
-    - env: PYENV_VERSION=pypy3.6-7.0.0 PYENV_VERSION_STRING='PyPy 5.8.0-beta0'
+    - env: PYENV_VERSION=pypy3.6-7.0.0 PYENV_VERSION_STRING='PyPy3.6 7.0.0'
 
 cache:
   - pip
@@ -13,11 +13,7 @@ cache:
     - $HOME/.pyenv_cache
 
 before_install:
-  - |
-      if [[ -n "$PYENV_VERSION" ]]; then
-        wget https://github.com/praekeltfoundation/travis-pyenv/releases/download/0.4.0/setup-pyenv.sh
-        source setup-pyenv.sh
-      fi
+  - pyenv update
 
 install:
   - pip install -U pip
