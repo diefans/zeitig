@@ -13,11 +13,13 @@ cache:
     - $HOME/.pyenv_cache
 
 before_install:
+  - git clone git://github.com/pyenv/pyenv-update.git $(pyenv root)/plugins/pyenv-update
   - pyenv update
-
-install:
   - pip install -U pip
   - curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
+
+
+install:
   - source $HOME/.poetry/env
   - poetry install -v
   - poetry build -v
