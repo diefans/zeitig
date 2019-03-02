@@ -28,8 +28,8 @@ pylava-pylint = "*"
 pycodestyle = "*"
 pydocstyle = "*"
 radon = "*"
-isort = "*"
 pdbpp = "*"
+isort = {version = "^4.3",extras = ["pyproject"]}
 
 [tool.poetry.scripts]
 z = "zeitig.scripts:run"

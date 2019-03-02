@@ -34,20 +34,31 @@ def working_day_situations():
     return situations
 
 
-def test_joined_work_day(working_day_situations):
-    from zeitig import aggregates
+def test_joined_work_day():
     import pendulum
+    from zeitig import aggregates, events
 
     tz = pendulum.timezone('Europe/Berlin')
+    situations = [sit(
+        start=pendulum.parse(start).in_tz(tz),
+        end=pendulum.parse(end).in_tz(tz),
+        tags=tags
+    ) for sit, start, end, tags in [
+        (events.Work, '2018-04-02 08', '2018-04-02 12', [1, 2]),
+        (events.Work, '2018-04-03 13', '2018-04-03 15', [2, 3]),
+        (events.Work, '2018-04-03 15:30', '2018-04-03 18', [3, 4]),
+        (events.Work, '2018-04-05 08', '2018-04-05 12', [5]),
+        (events.Work, '2018-04-05 12', '2018-04-05 20', [6]),
+    ]]
 
     days = list(
         event for event in aggregates.JoinedWorkDay.aggregate(
-            working_day_situations)
+            situations)
         if isinstance(event, aggregates.JoinedWorkDay)
     )
 
     # debug travis
-    for s in working_day_situations:
+    for s in situations:
         print(s)
 
     assert days == [
@@ -57,7 +68,10 @@ def test_joined_work_day(working_day_situations):
         aggregates.JoinedWorkDay(pendulum.parse('2018-04-03').in_tz(tz),
                                  tags=[2, 3, 3, 4],
                                  duration=pendulum.duration(hours=4,
-                                                            minutes=30))
+                                                            minutes=30)),
+        aggregates.JoinedWorkDay(pendulum.parse('2018-04-05').in_tz(tz),
+                                 tags=[5, 6],
+                                 duration=pendulum.duration(hours=12)),
     ]
 
 
