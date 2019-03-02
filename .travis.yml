@@ -13,7 +13,7 @@ matrix:
     - python: "3.6"
     - python: "3.7"
     - python: "3.8-dev"
-    - python: "pypy3"
+    #- python: "pypy3"
 
 allow_failures:
   - python: "pypy-3.6"
