@@ -34,11 +34,13 @@ def working_day_situations():
     return situations
 
 
-def test_joined_work_day():
+def test_joined_work_day(mocker):
     import pendulum
     from zeitig import aggregates, events
 
     tz = pendulum.timezone('Europe/Berlin')
+
+    mocker.patch.object(events, 'local_timezone', new=tz)
     situations = [sit(
         start=pendulum.parse(start).in_tz(tz),
         end=pendulum.parse(end).in_tz(tz),
