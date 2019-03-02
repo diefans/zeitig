@@ -90,24 +90,19 @@ class JoinedWorkDay(events.Situation):
 
     @classmethod
     def aggregate(cls, iter_events):
-        log = logging.getLogger(__name__)
-
         actual_day = None
         for event in iter_events:
             if isinstance(event, events.Work):
-                log.debug('event: %s', event)
                 if not actual_day:
                     actual_day = JoinedWorkDay(event.start)
 
                 else:
                     dt_change = DatetimeChange(actual_day, event)
                     if dt_change.is_new_day:
-                        log.debug('new day: %s', dt_change)
                         yield actual_day
                         actual_day = JoinedWorkDay(event.start)
 
                 actual_day.add_work(event)
-                log.debug('add work %s: %s', event, actual_day)
             yield event
         else:
             # yield the last day

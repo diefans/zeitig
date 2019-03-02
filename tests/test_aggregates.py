@@ -4,9 +4,9 @@ import pytest
 @pytest.fixture
 def working_day_situations():
     from zeitig import events
-    from pendulum import parse, timezone
+    from pendulum import parse
 
-    tz = timezone('Europe/Berlin')
+    tz = events.local_timezone
 
     situations = [
         events.Break(
@@ -34,46 +34,27 @@ def working_day_situations():
     return situations
 
 
-def test_joined_work_day(mocker):
+def test_joined_work_day(working_day_situations):
     import pendulum
     from zeitig import aggregates, events
 
-    tz = pendulum.timezone('Europe/Berlin')
-
-    mocker.patch.object(events, 'local_timezone', new=tz)
-    situations = [sit(
-        start=pendulum.parse(start).in_tz(tz),
-        end=pendulum.parse(end).in_tz(tz),
-        tags=tags
-    ) for sit, start, end, tags in [
-        (events.Work, '2018-04-02 08', '2018-04-02 12', [1, 2]),
-        (events.Work, '2018-04-03 13', '2018-04-03 15', [2, 3]),
-        (events.Work, '2018-04-03 15:30', '2018-04-03 18', [3, 4]),
-        (events.Work, '2018-04-05 08', '2018-04-05 12', [5]),
-        (events.Work, '2018-04-05 12', '2018-04-05 20', [6]),
-    ]]
-
     days = list(
         event for event in aggregates.JoinedWorkDay.aggregate(
-            situations)
+            working_day_situations)
         if isinstance(event, aggregates.JoinedWorkDay)
     )
 
-    # debug travis
-    for s in situations:
-        print(s)
-
     assert days == [
-        aggregates.JoinedWorkDay(pendulum.parse('2018-04-02').in_tz(tz),
-                                 tags=[1, 2],
-                                 duration=pendulum.duration(hours=4)),
-        aggregates.JoinedWorkDay(pendulum.parse('2018-04-03').in_tz(tz),
-                                 tags=[2, 3, 3, 4],
-                                 duration=pendulum.duration(hours=4,
-                                                            minutes=30)),
-        aggregates.JoinedWorkDay(pendulum.parse('2018-04-05').in_tz(tz),
-                                 tags=[5, 6],
-                                 duration=pendulum.duration(hours=12)),
+        aggregates.JoinedWorkDay(
+            pendulum.parse('2018-04-02').in_tz(events.local_timezone),
+            tags=[1, 2],
+            duration=pendulum.duration(hours=4)
+        ),
+        aggregates.JoinedWorkDay(
+            pendulum.parse('2018-04-03').in_tz(events.local_timezone),
+            tags=[2, 3, 3, 4],
+            duration=pendulum.duration(hours=4,
+                                       minutes=30)),
     ]
 
 
