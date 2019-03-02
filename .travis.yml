@@ -1,5 +1,12 @@
 sudo: false
 dist: xenial
+
+cache:
+  pip: true
+  directories:
+    - $HOME/.cache/pypoetry
+
+
 language: python
 matrix:
   include:

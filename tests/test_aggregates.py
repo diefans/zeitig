@@ -45,6 +45,11 @@ def test_joined_work_day(working_day_situations):
             working_day_situations)
         if isinstance(event, aggregates.JoinedWorkDay)
     )
+
+    # debug travis
+    for s in working_day_situations:
+        print(s)
+
     assert days == [
         aggregates.JoinedWorkDay(pendulum.parse('2018-04-02').in_tz(tz),
                                  tags=[1, 2],
