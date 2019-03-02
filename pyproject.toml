@@ -4,6 +4,10 @@ version = "0.3.1"
 description = "time tracker and reporter"
 authors = ["Oliver Berger <diefans@gmail.com>"]
 license = "Apache-2.0"
+homepage = "https://github.com/diefans/zeitig"
+repository = "https://github.com/diefans/zeitig"
+keywords = "time tracker"
+readme = "README.rst"
 
 [tool.poetry.dependencies]
 python = "^3.6"
