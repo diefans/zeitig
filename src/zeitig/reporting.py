@@ -27,6 +27,7 @@ log = logging.getLogger(__name__)
 TEMPLATE_DEFAULTS_NAME = 'template_defaults.toml'
 TEMPLATE_SYNTAX_NAME = 'template_syntax.toml'
 TEMPLATE_PATH_NAME = 'templates'
+CACHE_PATH_NAME = 'cache'
 
 
 class ReportException(Exception):
@@ -114,6 +115,29 @@ DEFAULT_JINJA_ENVS = {
 }
 
 
+class TemplatesCache(jinja2.BytecodeCache):
+    def __init__(self, store):
+        self.store = store
+
+    @utils.reify
+    def cache_path(self):
+        path = self.store.store_path.joinpath(CACHE_PATH_NAME)
+        if not path.is_dir():
+            path.mkdir()
+        return path
+
+    def load_bytecode(self, bucket):
+        filename = self.cache_path.joinpath(bucket.key)
+        if filename.is_file():
+            with filename.open('rb') as f:
+                bucket.load_bytecode(f)
+
+    def dump_bytecode(self, bucket):
+        filename = self.cache_path.joinpath(bucket.key)
+        with filename.open('wb') as f:
+            bucket.write_bytecode(f)
+
+
 class Templates:
     def __init__(self, store):
         self.store = store
@@ -162,6 +186,8 @@ class Templates:
     def get_jinja_env(self, template_name):
         syntax = self.get_template_syntax(template_name=template_name)
         env = jinja2.Environment(
+            bytecode_cache=TemplatesCache(self.store),
+            enable_async=True,
             loader=jinja2.ChoiceLoader([
                 jinja2.FileSystemLoader(
                     str(self.store.group_path.joinpath(TEMPLATE_PATH_NAME))),
@@ -207,6 +233,11 @@ class Report(Templates):
                 'filter_no_breaks': aggregates.filter_no_breaks,
                 'split_at_new_day': aggregates.split_at_new_day,
                 'pipeline': utils.pipeline,
+            },
+            'agg': {
+                name: agg
+                for name, agg in vars(aggregates).items()
+                if callable(agg) or hasattr(agg, 'aggregate')
             },
             'c': crayons,
         })
