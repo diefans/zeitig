@@ -22,6 +22,6 @@ allow_failures:
 
 install:
   - pip install -U pip
-  - pip install tox-travis
+  - pip install poetry tox-travis
 
 script: tox
