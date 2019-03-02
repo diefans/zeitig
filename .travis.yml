@@ -13,6 +13,5 @@ install:
   - source $HOME/.poetry/env
   - poetry install -v
   - poetry build -v
-  - pip install pytest-randomly pytest-cov
 
 script: poetry run pytest --cov=zeitig --cov-config=.coveragerc tests/ -W ignore
