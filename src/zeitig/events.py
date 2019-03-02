@@ -60,7 +60,7 @@ class Interval:
     def is_local_overnight(self):
         if self.local_start:
             # either end or local now
-            end = self.local_end or pendulum.now()
+            end = self.local_end or utils.utcnow()
             period = end.date() - self.local_start.date()
             return period.total_days() > 0
         # return None if no start is given
@@ -232,7 +232,7 @@ class Event(metaclass=_EventMeta):
     __type__ = None
 
     when = Parameter(
-        default=pendulum.now(tz='UTC'), deserialize=validate_when,
+        default=utils.utcnow(), deserialize=validate_when,
         description='Time of the event.'
     )
     type = Parameter(

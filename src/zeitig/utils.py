@@ -1,5 +1,7 @@
 import functools
 
+import pendulum
+
 
 class reify:
     def __init__(self, wrapped):
@@ -29,3 +31,8 @@ def pipeline(*iterators):
         else:
             pipeline = it(pipeline)
     return pipeline
+
+
+def utcnow():
+    """Return utcnow."""
+    return pendulum.now(tz='UTC')

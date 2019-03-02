@@ -107,7 +107,7 @@ class PendulumLocal(click.ParamType):
 @click.pass_context
 def cli(ctx, group):
     # logging.basicConfig(level=logging.DEBUG)
-    now = pendulum.now(tz='UTC')
+    now = utils.utcnow()
     ev_store = store.Store(group=group)
     ctx.obj.update({
         'now': now,
