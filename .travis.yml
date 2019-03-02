@@ -22,9 +22,6 @@ allow_failures:
 
 install:
   - pip install -U pip
-  - curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
-  - source $HOME/.poetry/env
-  - poetry install -v
-  - poetry build -v
+  - pip install tox-travis
 
-script: poetry run pytest --log-level debug -vvv --cov=zeitig --cov-config=.coveragerc tests/ -W ignore
+script: tox
