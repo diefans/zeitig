@@ -18,4 +18,4 @@ install:
   - poetry install -v
   - poetry build -v
 
-script: poetry run pytest --cov=zeitig --cov-config=.coveragerc tests/ -W ignore
+script: poetry run pytest -vvv --cov=zeitig --cov-config=.coveragerc tests/ -W ignore
