@@ -1,11 +1,23 @@
-sudo: false
-dist: xenial
 language: python
-python:
-  - "3.6"
-  - "3.7"
-  - "3.8-dev"
-  - "pypy3.6"
+dist: xenial
+matrix:
+  include:
+    - python: '3.6'
+    - python: '3.7'
+    - python: '3.8-dev'
+    - env: PYENV_VERSION=pypy3.6-7.0.0 PYENV_VERSION_STRING='PyPy 5.8.0-beta0'
+
+cache:
+  - pip
+  - directories:
+    - $HOME/.pyenv_cache
+
+before_install:
+  - |
+      if [[ -n "$PYENV_VERSION" ]]; then
+        wget https://github.com/praekeltfoundation/travis-pyenv/releases/download/0.4.0/setup-pyenv.sh
+        source setup-pyenv.sh
+      fi
 
 install:
   - pip install -U pip
