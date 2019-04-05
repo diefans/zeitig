@@ -205,10 +205,11 @@ class Templates:
 
 
 class Report(Templates):
-    def __init__(self, store, *, start, end):
+    def __init__(self, store, *, start, end, round=None):
         super().__init__(store)
         self.start = start
         self.end = end
+        self.round = round
 
     def render(self, template_name=None):
         context = self.join_template_defaults()
@@ -221,7 +222,7 @@ class Report(Templates):
                 'end': self.end,
                 'group': self.store.group_path.name,
                 'source': sourcing.Sourcerer(self.store)
-                .generate(start=self.start, end=self.end),
+                .generate(start=self.start, end=self.end, round=self.round),
             },
             'events': {
                 'Summary': aggregates.Summary,

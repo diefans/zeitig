@@ -41,13 +41,14 @@ z [<group>] maintain list
 
 """
 import logging
+import re
 
 import click
 import crayons
 import pendulum
 import qtoml
 
-from . import events, reporting, store, utils, sourcing
+from . import events, reporting, sourcing, store, utils
 
 log = logging.getLogger(__name__)
 
@@ -174,7 +175,6 @@ class Regex(click.ParamType):
     name = 'regex'
 
     def convert(self, value, param, ctx):
-        import re
         try:
             regex = re.compile(value)
             return regex
@@ -204,16 +204,40 @@ def cli_remove(obj, tags, note, when):
     click.echo(event)
 
 
+class Round(click.ParamType):
+    name = 'round'
+    re_round = re.compile(r'(?P<size>\d+)(?P<unit>s|m|h)?')
+
+    def convert(self, value, param, ctx):
+        match = self.re_round.match(value)
+        if match:
+            size, unit = match.groups()
+            round = events.Round(int(size) * (
+                                 1 if unit is None
+                                 else 1 if unit == 's'
+                                 else 60 if unit == 'm'
+                                 else 3600))
+            return round
+        else:
+            self.fail(f'`{value}` is not a valid round',
+                      param, ctx)
+
+    def __repr__(self):
+        return 'Round'
+
+
 @cli.command('report')
 @click.option('-s', '--start', type=PendulumLocal())
 @click.option('-e', '--end', type=PendulumLocal())
 @click.option('-t', '--template', default='console',
               help='A template to render the report.')
+@click.option('-r', '--round', type=Round(),
+              help='Round situation start and end to blocks of this size.')
 @click.pass_obj
-def cli_report(obj, start, end, template):
+def cli_report(obj, start, end, template, round):
     """Create a report of your events."""
     end = (end or obj['now']).in_tz('UTC')
-    report = reporting.Report(obj.store, start=start, end=end)
+    report = reporting.Report(obj.store, start=start, end=end, round=round)
     try:
         report.print(template_name=template)
     except reporting.ReportTemplateNotFound:

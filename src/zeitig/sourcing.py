@@ -45,7 +45,7 @@ class Sourcerer:
             self.events[link] = event
             return event
 
-    def generate(self, *, start=None, end=None):
+    def generate(self, *, start=None, end=None, round=None):
         """Generate all intervals within this time frame."""
         current_situation = None
         for link in self.store.iter_names():
@@ -61,7 +61,7 @@ class Sourcerer:
             if current_situation is None:
                 if (not start or start == link.when)\
                         and isinstance(event, events.SituationEvent):
-                    current_situation = event.create_situation()
+                    current_situation = event.create_situation(round=round)
                     continue
                 else:
                     # assemble state of first event
@@ -71,19 +71,20 @@ class Sourcerer:
             # apply events
             if isinstance(event, events.SituationEvent):
                 # close situation, yield it and create a new one
-                new_situation = event.close_situation(current_situation)
+                new_situation = event.close_situation(current_situation, round=round)
                 yield current_situation
                 current_situation = new_situation
             else:
                 event.apply_to_situation(current_situation)
         if current_situation:
+            current_situation.is_last = True
             # quasi close last situation
             current_situation.end = utils.utcnow()
             if end:
                 current_situation.end = end
             yield current_situation
 
-    def _find_situation_before(self, link):
+    def _find_situation_before(self, link, round=None):
         """
         :param link: the store link from where we start to search.
         """
@@ -91,7 +92,7 @@ class Sourcerer:
         for before in link.before():
             event = self.load_event(before)
             if isinstance(event, events.SituationEvent):
-                situation = event.create_situation()
+                situation = event.create_situation(round=round)
                 # switch to next before
                 before = before.next
                 break

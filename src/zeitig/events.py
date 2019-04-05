@@ -29,10 +29,57 @@ else:
     PATTERN_TYPE = re._pattern_type
 
 
+class Round:
+    def __init__(self, size):
+        """
+        :param div: the size of a block in seconds.
+        """
+        self.size = size
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}: {self.size} seconds>'
+
+    @staticmethod
+    def _total_seconds(datetime):
+        duration = pendulum.Duration(
+            hours=datetime.hour,
+            minutes=datetime.minute,
+            seconds=datetime.second,
+            microseconds=datetime.microsecond
+        )
+        return duration.total_seconds()
+
+    def block(self, datetime):
+        """Return the start and end of that round.
+
+        We consider datetme as local tz
+        """
+        total_seconds = self._total_seconds(datetime)
+        blocks, rest = divmod(total_seconds, self.size)
+        start_duration = pendulum.Duration(seconds=blocks * self.size)
+        end_duration = pendulum.Duration(seconds=(
+            blocks + (1 if rest else 0)) * self.size)
+
+        start = datetime.set(
+            hour=start_duration.hours,
+            minute=start_duration.minutes,
+            second=start_duration.remaining_seconds,
+            microsecond=0,
+        )
+        end = datetime.set(
+            hour=end_duration.hours,
+            minute=end_duration.minutes,
+            second=end_duration.remaining_seconds,
+            microsecond=0,
+        )
+        return start, end
+
+
 class Interval:
-    def __init__(self, *, start=None, end=None):
+    def __init__(self, *, start=None, end=None, round=None):
         self.start = start
         self.end = end
+        self.round = round
 
     @utils.reify
     def local_start(self):
@@ -76,6 +123,9 @@ class Situation(Interval):
         super().__init__(*args, **kwargs)
         self.tags = tags if tags is not None else []
         self.notes = [note] if note is not None else []
+        # seem a bit hacky
+        # `is_last` tags a situation for reporting
+        self.is_last = False
 
     def split_local_overnight(self):
         """Split the situation at local day changes."""
@@ -111,11 +161,39 @@ class Situation(Interval):
 
 
 class Work(Situation):
-    pass
+    @utils.reify
+    def local_start(self):
+        """Align the start to the beginning of the round."""
+        start = super().local_start
+        if self.round:
+            start, _ = self.round.block(start)
+        return start
+
+    @utils.reify
+    def local_end(self):
+        """Align the end to the end of the round."""
+        end = super().local_end
+        if self.round:
+            _, end = self.round.block(end)
+        return end
 
 
 class Break(Situation):
-    pass
+    @utils.reify
+    def local_start(self):
+        """Align the start to the end of the round."""
+        start = super().local_start
+        if self.round:
+            _, start = self.round.block(start)
+        return start
+
+    @utils.reify
+    def local_end(self):
+        """Align the end to the beginning of the round."""
+        end = super().local_end
+        if self.round:
+            end, _ = self.round.block(end)
+        return end
 
 
 class NoDefault:
@@ -288,19 +366,20 @@ class SituationEvent:
         description='Note for the current situation.'
     )
 
-    def create_situation(self):
+    def create_situation(self, round=None):
         """Create a situation."""
         situation = self.__situation__(
             start=self.when,
             tags=self.tags,
             note=self.note,
+            round=round,
         )
         return situation
 
-    def close_situation(self, situation):
+    def close_situation(self, situation, round=None):
         """Close a situation and create the next one."""
         situation.end = self.when
-        return self.create_situation()
+        return self.create_situation(round=round)
 
 
 class WorkEvent(Event, SituationEvent):

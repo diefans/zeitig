@@ -70,3 +70,18 @@ def test_split_situation_over_night(events):
         pendulum.period(start=pendulum.parse('2018-04-02 00:00:00', tz=local),
                         end=pendulum.parse('2018-04-02 08:00:00', tz=local)),
     ]
+
+
+@pytest.mark.parametrize('dt, div, result', [
+    ('2018-01-01 11:12:13.456789', 1, ('2018-01-01 11:12:13', '2018-01-01 11:12:14')),
+    ('2018-01-01 11:12:13.456789', 60, ('2018-01-01 11:12:00', '2018-01-01 11:13:00')),
+    ('2018-01-01 11:12:13.456789', 60 * 5, ('2018-01-01 11:10:00', '2018-01-01 11:15:00')),
+])
+def test_round(dt, div, result, events):
+    import pendulum
+    r = events.Round(div)
+    block = r.block(pendulum.parse(dt, tz=events.local_timezone))
+    assert block == (
+        pendulum.parse(result[0], tz=events.local_timezone),
+        pendulum.parse(result[1], tz=events.local_timezone),
+    )
