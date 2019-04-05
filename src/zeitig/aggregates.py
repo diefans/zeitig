@@ -30,10 +30,10 @@ class Summary:
             if self.start is None:
                 self.start = event.start
             self.end = event.end
-            self.works += event.period
+            self.works += event.local_period
             # only if we have another work, we add last breaks
             for b in last_breaks:
-                self.breaks += b.period
+                self.breaks += b.local_period
             last_breaks.clear()
 
         elif isinstance(event, events.Break)\
@@ -84,7 +84,7 @@ class JoinedWorkDay(events.Situation):
     def add_work(self, work_event):
         self.tags.extend(work_event.tags)
         self.notes.extend(work_event.notes)
-        self.duration += work_event.period.as_interval()
+        self.duration += work_event.local_period.as_interval()
 
     @classmethod
     def aggregate(cls, iter_events):

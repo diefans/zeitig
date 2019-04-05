@@ -21,7 +21,7 @@ Working times for {{c.white(report.group, bold=True)}}{{from_start()}}{{until_en
         {% endif -%}
     {%- endif -%}
     {%- if py.isinstance(event, events.Work) -%}
-        {{- '\t'}}{{event.local_start.to_datetime_string()}} - {% if event.is_last %}{{c.green(event.local_end.to_time_string())}}{% else %}{{event.local_end.to_time_string()}}{% endif %} - {{'{0:.2f}'.format(event.period.total_hours())-}}
+        {{- '\t'}}{{event.local_start.to_datetime_string()}} - {% if event.is_last %}{{c.green(event.local_end.to_time_string())}}{% else %}{{event.local_end.to_time_string()}}{% endif %} - {{'{0:.2f}'.format(event.local_period.total_hours())-}}
         {%- if event.tags %} - {{", ".join(event.tags)}}{%- else %}{%- endif %}
     {% endif -%}
     {% if py.isinstance(event, events.Summary) -%}
