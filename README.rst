@@ -90,14 +90,14 @@ the events sources:
         |
         +- <user>
             |
-            +- last ---------------+
-            |                      |
-            +- groups              |
-            |   |                  |
-            |   +- <group>         |
-            |       |              |
-            |       +- source      |
-            |       |   |          v
+            +- last ---+
+            |          |
+            +- groups  |
+            |   |      v
+            |   +- <group>
+            |       |     
+            |       +- source
+            |       |   |    
             |       |   +- <event UTC timestamp>
             |       |
             |       +- templates
